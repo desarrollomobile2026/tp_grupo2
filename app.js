@@ -1,315 +1,235 @@
-// 1. INICIALIZACIÓN Y CONFIGURACIÓN VIA CONFIG.JS
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+// app.js - Motor NoSQL en Tiempo Real (Moniarquía Indumentaria)
 
-// 2. REFERENCIAS DEL DOM (Elementos de la Interfaz)
-const modal = document.getElementById("modal-detalle");
-const btnClose = document.querySelector(".close-button");
-const contenedor = document.getElementById('contenedor-productos');
-const tituloApp = document.getElementById('titulo-app');
-const btnLike = document.getElementById("btn-like");
-const buscador = document.getElementById('input-buscador');
-const contenedorDestacados = document.getElementById('contenedor-destacados');
-const btnAnadirCarrito = document.querySelector("#modal-detalle .btn-comprar");
-const modalAgregar = document.getElementById('modal-agregar');
+// =====================================================================
+// 1. ESTADO GLOBAL (Memoria RAM + LocalStorage del usuario)
+// =====================================================================
+let carrito = JSON.parse(localStorage.getItem('moniarquia_cart_v1')) || [];
+let listaPrendasGlobal = [];
+let filtroCategoriaActual = "Todas";
+let terminoBuscado = "";
 
-// Variables de control de estado (State Management)
-let productoActualId = null;
-let todosLosProductos = []; 
-let carrito = JSON.parse(localStorage.getItem('carrito')) || [];
-let firebaseListener = null; 
-let categoriaActual = null;
+// =====================================================================
+// 2. CONEXIÓN A FIRESTORE (El "Woki-Toki" con Google)
+// =====================================================================
+document.addEventListener('DOMContentLoaded', () => {
+    actualizarBadgeCarrito();
+    renderizarCarrito();
 
-// 3. CONTROL DE VISTAS (Navegación SPA)
-function cambiarPantalla(pantalla) {
-    const vistas = ['inicio', 'productos', 'carrito'];
-    vistas.forEach(v => {
-        const viewEl = document.getElementById(`view-${v}`);
-        if (viewEl) viewEl.style.display = 'none';
+    // ESCUCHA EN TIEMPO REAL: db.collection().onSnapshot()
+    db.collection('productos').onSnapshot((snapshot) => {
+        listaPrendasGlobal = [];
+        
+        snapshot.forEach((doc) => {
+            listaPrendasGlobal.push({
+                id: doc.id,
+                ...doc.data()
+            });
+        });
+
+        renderizarCatalogo();
+        renderizarFavoritos();
+    }, (error) => {
+        console.error("Error al escuchar Firestore:", error);
     });
-    
-    const btnAgregar = document.getElementById('btn-agregar-flotante');
-    if (btnAgregar) btnAgregar.style.display = 'none';
-    
-    const vistaActiva = document.getElementById(`view-${pantalla === 'favoritos' ? 'productos' : pantalla}`);
-    if (vistaActiva) vistaActiva.style.display = 'block';
 
-    switch (pantalla) {
-        case 'inicio':
-            tituloApp.innerText = "Mi Tienda";
-            if (buscador) buscador.value = "";
-            break;
-        case 'productos':
-            tituloApp.innerText = "Todos los productos";
-            cargarProductos(); 
-            break;
-        case 'favoritos':
-            tituloApp.innerText = "Mis Favoritos ❤️";
-            cargarProductos("favoritos");
-            break;
-        case 'carrito':
-            tituloApp.innerText = "Mi Carrito";
-            actualizarVistaCarrito();
-            break;
+    // Poner a la lupa a escuchar el teclado
+    const inputBuscador = document.getElementById('input-busqueda');
+    if (inputBuscador) {
+        inputBuscador.addEventListener('input', (e) => {
+            terminoBuscado = e.target.value.toLowerCase();
+            renderizarCatalogo();
+        });
     }
+});
+
+// =====================================================================
+// 3. MOTORES DE RENDERIZADO EN PANTALLA
+// =====================================================================
+
+function renderizarCatalogo() {
+    const contenedor = document.getElementById('contenedor-productos');
+    if (!contenedor) return;
+    contenedor.innerHTML = "";
+
+    const prendasFiltradas = listaPrendasGlobal.filter(prenda => {
+        const pasaCat = (filtroCategoriaActual === "Todas") || (prenda.categoria === filtroCategoriaActual);
+        const pasaNom = prenda.nombre.toLowerCase().includes(terminoBuscado);
+        return pasaCat && pasaNom;
+    });
+
+    if (prendasFiltradas.length === 0) {
+        contenedor.innerHTML = '<p class="cargando" style="grid-column: span 2;">No hay stock cargado para esta sección.</p>';
+        return;
+    }
+
+    prendasFiltradas.forEach(p => {
+        contenedor.innerHTML += `
+            <div class="card-producto">
+                <img src="${p.foto_url}" alt="${p.nombre}" onerror="this.src='https://placehold.co/300x400/FFDFDF/1E1E1E?text=Sin+Foto'">
+                <div class="card-info">
+                    <div>
+                        <h3 class="nombre-prenda">${p.nombre}</h3>
+                        <p class="precio-prenda">$ ${p.precio.toLocaleString('es-AR')}</p>
+                    </div>
+                    <div class="card-actions">
+                        <button class="btn-like ${p.likes > 0 ? 'liked' : ''}" onclick="darLike('${p.id}')">
+                            ❤️ <span>${p.likes}</span>
+                        </button>
+                        <button class="btn-add" onclick="agregarAlCarrito('${p.id}')">+</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+}
+
+function renderizarFavoritos() {
+    const contenedor = document.getElementById('contenedor-destacados');
+    if (!contenedor) return;
+    contenedor.innerHTML = "";
+
+    // Ordenar de mayor a menor por likes y agarrar los 3 primeros
+    const top3 = [...listaPrendasGlobal].sort((a, b) => b.likes - a.likes).slice(0, 3);
+
+    top3.forEach(p => {
+        contenedor.innerHTML += `
+            <div class="card-producto">
+                <img src="${p.foto_url}" alt="${p.nombre}">
+                <div class="card-info" style="padding: 6px; text-align:center;">
+                    <h3 class="nombre-prenda" style="font-size:11px;">${p.nombre}</h3>
+                    <button class="btn-like liked" style="width:100%; justify-content:center;" onclick="darLike('${p.id}')">
+                        ❤️ ${p.likes} deseos
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+}
+
+// =====================================================================
+// 4. ACCIONES CRUD CON FIRESTORE
+// =====================================================================
+
+function darLike(idPrenda) {
+    // Incremento Atómico NoSQL: Le suma 1 directo en el servidor de Google
+    db.collection('productos').doc(idPrenda).update({
+        likes: firebase.firestore.FieldValue.increment(1)
+    }).catch(err => console.error("Fallo el like:", err));
+}
+
+// ALTA DESDE EL PANEL ADMIN
+document.getElementById('form-alta-producto')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+
+    const botonBoton = e.target.querySelector('button[type="submit"]');
+    botonBoton.innerText = "Subiendo a Google...";
+    botonBoton.disabled = true;
+
+    const nuevaPrenda = {
+        nombre: document.getElementById('alta-nombre').value,
+        precio: parseFloat(document.getElementById('alta-precio').value),
+        categoria: document.getElementById('alta-categoria').value,
+        foto_url: document.getElementById('alta-foto').value,
+        descripcion: document.getElementById('alta-desc').value,
+        likes: 0
+    };
+
+    db.collection('productos').add(nuevaPrenda)
+        .then(() => {
+            alert("¡Prenda guardada con éxito en Firestore!");
+            e.target.reset();
+            document.querySelector('.bottom-nav .nav-item').click(); // Simula tocar el botón "Inicio"
+        })
+        .catch(err => alert("Error de Firestore: " + err))
+        .finally(() => {
+            botonBoton.innerText = "Guardar en Base de Datos";
+            botonBoton.disabled = false;
+        });
+});
+
+// =====================================================================
+// 5. LÓGICA DEL CARRITO (PERSISTENCIA LOCAL)
+// =====================================================================
+
+function agregarAlCarrito(idFirestore) {
+    const item = listaPrendasGlobal.find(p => p.id === idFirestore);
+    if (!item) return;
+
+    carrito.push({ cartId: Date.now() + Math.random(), ...item });
+    sincronizarCarritoLocal();
+}
+
+function borrarDelCarrito(cartId) {
+    carrito = carrito.filter(i => i.cartId !== cartId);
+    sincronizarCarritoLocal();
+}
+
+function sincronizarCarritoLocal() {
+    localStorage.setItem('moniarquia_cart_v1', JSON.stringify(carrito));
+    actualizarBadgeCarrito();
+    renderizarCarrito();
+}
+
+function actualizarBadgeCarrito() {
+    const b = document.getElementById('badge-carrito');
+    if(b) b.innerText = carrito.length;
+}
+
+function renderizarCarrito() {
+    const cont = document.getElementById('contenedor-items-carrito');
+    const montoTotDom = document.getElementById('monto-total-carrito');
+    if(!cont) return;
+
+    cont.innerHTML = "";
+    let suma = 0;
+
+    if (carrito.length === 0) {
+        cont.innerHTML = '<p class="cargando">Tu carrito está vacío.</p>';
+        montoTotDom.innerText = "$ 0";
+        return;
+    }
+
+    carrito.forEach(i => {
+        suma += i.precio;
+        cont.innerHTML += `
+            <div class="item-carrito">
+                <div class="item-carrito-info">
+                    <h4>${i.nombre}</h4>
+                    <p>$ ${i.precio.toLocaleString('es-AR')}</p>
+                </div>
+                <button class="btn-borrar" onclick="borrarDelCarrito(${i.cartId})">X</button>
+            </div>
+        `;
+    });
+
+    montoTotDom.innerText = "$ " + suma.toLocaleString('es-AR');
+}
+
+function finalizarPedido() {
+    if(carrito.length === 0) return alert("El carrito está vacío.");
+    
+    let msj = "¡Hola Moniarquía! Quiero encargar este pedido:%0A%0A";
+    carrito.forEach(p => msj += `• ${p.nombre} ($${p.precio})%0A`);
+    const tot = carrito.reduce((acc, p) => acc + p.precio, 0);
+    msj += `%0A*Total a pagar: $${tot}*`;
+
+    window.open(`https://wa.me/5491100000000?text=${msj}`, '_blank');
+    carrito = [];
+    sincronizarCarritoLocal();
+}
+
+// Controlador de vistas inferior
+function cambiarVista(idDestino, btn) {
+    document.querySelectorAll('.vista').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.bottom-nav .nav-item').forEach(b => b.classList.remove('active'));
+    document.getElementById(idDestino)?.classList.add('active');
+    btn.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function filtrarCategoria(cat) {
-    categoriaActual = cat;
-    cambiarPantalla('productos');
-    
-    const btnAgregar = document.getElementById('btn-agregar-flotante');
-    if (btnAgregar) btnAgregar.style.display = 'flex';
-    
-    cargarProductos(cat); 
+    filtroCategoriaActual = cat;
+    document.querySelectorAll('.categorias-scroll .chip').forEach(c => c.classList.remove('active'));
+    event.target.classList.add('active');
+    renderizarCatalogo();
 }
-
-// 4. LOGICA DE PRODUCTOS (Firestore Integration)
-function cargarProductos(tipo = null) {
-    if (firebaseListener) firebaseListener(); // Desvincular listener anterior para optimizar memoria
-
-    let consulta = db.collection("productos");
-    
-    if (tipo === "favoritos") {
-        consulta = consulta.where("likes", ">", 0).orderBy("likes", "desc");
-    } else if (tipo) {
-        consulta = consulta.where("categoria", "==", tipo);
-        tituloApp.innerText = "Categoría: " + tipo.charAt(0).toUpperCase() + tipo.slice(1);
-    }
-
-    firebaseListener = consulta.onSnapshot((snapshot) => {
-        contenedor.innerHTML = '';
-        if (snapshot.empty) {
-            contenedor.innerHTML = '<p class="sin-datos">No hay productos disponibles en esta sección.</p>';
-            return;
-        }
-
-        snapshot.forEach((doc) => {
-            const data = doc.data();
-            const id = doc.id;
-            
-            if (!todosLosProductos.find(p => p.id === id)) {
-                todosLosProductos.push({ id, ...data });
-            }
-            renderizarCard(id, data);
-        });
-    }, error => console.error("Error en tiempo real: ", error));
-}
-
-function cargarDestacados() {
-    if (!contenedorDestacados) return;
-
-    db.collection("productos")
-        .where("likes", ">", 0)
-        .orderBy("likes", "desc")
-        .limit(5)
-        .onSnapshot((snapshot) => {
-            contenedorDestacados.innerHTML = '';
-
-            if (snapshot.empty) {
-                contenedorDestacados.innerHTML = '<p class="destacados-vacios">Interactúa con los productos para ver tendencias.</p>';
-                return;
-            }
-
-            snapshot.forEach((doc) => {
-                const data = doc.data();
-                const id = doc.id;
-                const card = document.createElement('div');
-                card.className = 'card';
-                card.onclick = () => verDetalle(id, data.nombre, data.precio, data.foto_url, data.descripcion, data.likes);
-
-                card.innerHTML = `
-                    <img src="${data.foto_url || 'https://via.placeholder.com/200'}" alt="${data.nombre}">
-                    <div class="card-info">
-                        <div class="card-info-header">
-                            <h3>${data.nombre}</h3>
-                            <span class="badge-likes">❤️ ${data.likes}</span>
-                        </div>
-                        <p class="precio">$${data.precio}</p>
-                    </div>
-                `;
-                contenedorDestacados.appendChild(card);
-            });
-        });
-}
-
-function renderizarCard(id, data) {
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.onclick = () => verDetalle(id, data.nombre, data.precio, data.foto_url, data.descripcion, data.likes);
-    
-    card.innerHTML = `
-        <div class="card-img-container">
-            <img src="${data.foto_url || 'https://via.placeholder.com/200'}" alt="${data.nombre}">
-            <button class="btn-borrar-db" onclick="eliminarProducto('${id}', event)">🗑️</button>
-        </div>
-        <div class="card-info">
-            <div class="card-info-header">
-                <h3>${data.nombre}</h3>
-                <span>${data.likes > 0 ? '❤️ ' + data.likes : ''}</span>
-            </div>
-            <p class="precio">$${data.precio}</p>
-        </div>
-    `;
-    contenedor.appendChild(card);
-}
-
-// 5. MODAL DETALLE Y ACCIONES SOCIALES (Social Commerce)
-function verDetalle(id, nombre, precio, foto_url, descripcion, likes) {
-    productoActualId = id;
-    document.getElementById("modal-titulo").innerText = nombre;
-    document.getElementById("modal-precio").innerText = "$" + precio;
-    document.getElementById("modal-img").src = foto_url || 'https://via.placeholder.com/200';
-    
-    const descElement = document.querySelector(".descripcion");
-    if (descElement) descElement.innerText = descripcion || "Sin descripción disponible.";
-
-    if (btnLike) btnLike.innerText = (likes > 0) ? "❤️ " + likes : "🤍";
-    modal.style.display = "flex";
-}
-
-if (btnLike) {
-    btnLike.onclick = () => {
-        if (productoActualId) {
-            db.collection("productos").doc(productoActualId).update({
-                likes: firebase.firestore.FieldValue.increment(1)
-            });
-            btnLike.innerText = "❤️";
-        }
-    };
-}
-
-if (btnClose) btnClose.onclick = () => modal.style.display = "none";
-window.onclick = (e) => { if (e.target == modal) modal.style.display = "none"; };
-
-// 6. FLUJO DE COMPRA (Conversion Funnel)
-function agregarAlCarrito() {
-    const producto = todosLosProductos.find(p => p.id === productoActualId);
-    if (producto) {
-        carrito.push(producto);
-        localStorage.setItem('carrito', JSON.stringify(carrito));
-        actualizarVistaCarrito(); 
-        modal.style.display = "none";
-    }
-}
-
-function actualizarVistaCarrito() {
-    const lista = document.getElementById('lista-carrito');
-    const totalElemento = document.getElementById('precio-total');
-    if (!lista || !totalElemento) return;
-
-    lista.innerHTML = '';
-    let total = 0;
-
-    if (carrito.length === 0) {
-        lista.innerHTML = '<div class="carrito-vacio-msg"><p>Tu carrito está vacío 🛒</p></div>';
-        totalElemento.innerText = '$0';
-        return;
-    }
-
-    carrito.forEach((prod, index) => {
-        total += Number(prod.precio);
-        const item = document.createElement('div');
-        item.className = 'item-carrito';
-        item.innerHTML = `
-            <img src="${prod.foto_url || 'https://via.placeholder.com/200'}">
-            <div class="item-carrito-desc">
-                <h4>${prod.nombre}</h4>
-                <p>$${prod.precio}</p>
-            </div>
-            <button onclick="eliminarDelCarrito(${index})" class="btn-eliminar-item">🗑️</button>
-        `;
-        lista.appendChild(item);
-    });
-    totalElemento.innerText = `$${total}`;
-}
-
-function eliminarDelCarrito(index) {
-    carrito.splice(index, 1);
-    localStorage.setItem('carrito', JSON.stringify(carrito));
-    actualizarVistaCarrito();
-}
-
-function finalizarCompra() {
-    if (carrito.length === 0) {
-        alert("El carrito no contiene productos activos para procesar.");
-        return;
-    }
-    alert("¡Orden procesada con éxito! Gracias por tu compra.");
-    carrito = [];
-    localStorage.removeItem('carrito');
-    actualizarVistaCarrito();
-    cambiarPantalla('inicio');
-}
-
-// 7. MOTOR DE BUSQUEDA INTERNO (Internal Search Optimization)
-if (buscador) {
-    buscador.oninput = (e) => {
-        const texto = e.target.value.toLowerCase();
-        if (texto.length > 0) {
-            document.getElementById('view-inicio').style.display = 'none';
-            document.getElementById('view-productos').style.display = 'block';
-        }
-        const filtrados = todosLosProductos.filter(p => p.nombre.toLowerCase().includes(texto));
-        contenedor.innerHTML = '';
-        filtrados.forEach(p => renderizarCard(p.id, p));
-    };
-}
-
-// 8. GESTIÓN DE CATÁLOGO (Funciones de Administrador)
-function abrirModalAgregar() {
-    modalAgregar.style.display = 'flex';
-    if (categoriaActual) {
-        document.getElementById('add-categoria').value = categoriaActual;
-    }
-}
-
-function cerrarModalAgregar() {
-    modalAgregar.style.display = 'none';
-    document.getElementById('add-nombre').value = '';
-    document.getElementById('add-precio').value = '';
-    document.getElementById('add-foto').value = '';
-    document.getElementById('add-desc').value = '';
-}
-
-function guardarNuevoProducto() {
-    const nombre = document.getElementById('add-nombre').value;
-    const precio = document.getElementById('add-precio').value;
-    const categoria = document.getElementById('add-categoria').value;
-    const foto = document.getElementById('add-foto').value;
-    const desc = document.getElementById('add-desc').value;
-
-    if (!nombre || !precio) {
-        alert("Por favor, complete los campos mandatorios (Nombre y Precio).");
-        return;
-    }
-
-    db.collection("productos").add({
-        nombre: nombre,
-        precio: Number(precio), 
-        categoria: categoria,
-        foto_url: foto || 'https://via.placeholder.com/200', 
-        descripcion: desc,
-        likes: 0 
-    })
-    .then(() => {
-        cerrarModalAgregar();
-    })
-    .catch((error) => console.error("Error al persistir el alta de producto:", error));
-}
-
-function eliminarProducto(id, event) {
-    event.stopPropagation(); // Evita el efecto burbuja en la UX
-
-    const confirmacion = confirm("¿Está seguro de eliminar definitivamente este ítem del catálogo general?");
-    if (confirmacion) {
-        db.collection("productos").doc(id).delete()
-        .catch((error) => console.error("Error de eliminación en base de datos:", error));
-    }
-}
-
-// INICIALIZACIÓN GLOBAL
-document.addEventListener("DOMContentLoaded", () => {
-    cargarProductos();
-    cargarDestacados();
-});
