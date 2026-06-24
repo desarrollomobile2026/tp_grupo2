@@ -17,6 +17,9 @@ let productoAEliminar = null;
 // Stack de navegación (Back button)
 let historialNavegacion = [];
 
+// Stream de cámara activo (escaneo)
+let streamCamara = null;
+
 // Estado del flujo de venta (Etapa 3)
 let carritoVenta = JSON.parse(localStorage.getItem('moniarquia_carrito_venta')) || [];
 let productoActual = null;
@@ -317,6 +320,11 @@ function filtrarCategoria(cat) {
 // =====================================================================
 
 function navegarA(vistaId, opciones) {
+    // Si se abandona la vista de escaneo, apagar la cámara
+    if (document.querySelector('.vista.active')?.id === 'vista-escanear' && vistaId !== 'vista-escanear') {
+        detenerCamara();
+    }
+
     const silencioso = opciones?.silencioso === true;
 
     if (!silencioso) {
@@ -522,6 +530,7 @@ function guardarProducto(e) {
     const categoria = document.getElementById('inv-categoria')?.value  || '';
     const colorRaw  = (document.getElementById('inv-color')?.value     || '').trim();
     const foto      = (document.getElementById('inv-foto')?.value      || '').trim();
+
     if (!nombre || isNaN(precio) || !categoria) {
         alert('Completá los campos obligatorios: nombre, precio y categoría.');
         return;
@@ -1837,6 +1846,67 @@ function ejecutarCambio() {
         .finally(() => {
             if (btn) { btn.disabled = false; btn.textContent = 'Confirmar cambio'; }
         });
+}
+
+// =====================================================================
+// 12b. ESCANEO DE PRODUCTO (cámara simulada)
+// =====================================================================
+
+function abrirEscaneo() {
+    navegarA('vista-escanear');
+    // Limpiar estado anterior antes de iniciar
+    const estadoEl = document.getElementById('escaner-estado');
+    const videoEl  = document.getElementById('escaner-video');
+    if (estadoEl) { estadoEl.textContent = ''; estadoEl.style.display = 'none'; }
+    if (videoEl)  videoEl.style.display = 'block';
+    iniciarCamara();
+}
+
+function iniciarCamara() {
+    const videoEl = document.getElementById('escaner-video');
+    if (!videoEl) return;
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+        mostrarErrorCamara('Tu dispositivo no soporta acceso a la cámara desde esta app.');
+        return;
+    }
+
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } })
+        .then(stream => {
+            streamCamara = stream;
+            videoEl.srcObject = stream;
+        })
+        .catch(err => {
+            console.error('Cámara — error:', err.name, err.message);
+            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                mostrarErrorCamara('Permiso de cámara denegado.\nPodés buscar el producto manualmente.');
+            } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+                mostrarErrorCamara('No se encontró una cámara en este dispositivo.');
+            } else {
+                mostrarErrorCamara('No se pudo acceder a la cámara.\nPodés buscar el producto manualmente.');
+            }
+        });
+}
+
+function mostrarErrorCamara(mensaje) {
+    const videoEl  = document.getElementById('escaner-video');
+    const estadoEl = document.getElementById('escaner-estado');
+    if (videoEl)  videoEl.style.display = 'none';
+    if (estadoEl) { estadoEl.textContent = mensaje; estadoEl.style.display = 'flex'; }
+}
+
+function detenerCamara() {
+    if (streamCamara) {
+        streamCamara.getTracks().forEach(t => t.stop());
+        streamCamara = null;
+    }
+    const videoEl = document.getElementById('escaner-video');
+    if (videoEl) videoEl.srcObject = null;
+}
+
+function buscarManualmente() {
+    detenerCamara();
+    iniciarVenta();
 }
 
 function reiniciarCambios() {
