@@ -14,6 +14,15 @@ let terminoInvBusqueda = "";
 let productoEditandoId = null;
 let productoAEliminar = null;
 
+// Estado del flujo de venta (Etapa 3)
+let carritoVenta = JSON.parse(localStorage.getItem('moniarquia_carrito_venta')) || [];
+let productoActual = null;
+let tallaSeleccionada = null;
+let colorSeleccionado = null;
+let cantidadSeleccionada = 1;
+let filtroVentaCategoria = 'Todos';
+let terminoVentaBusqueda = '';
+
 // =====================================================================
 // 2. CONEXIÓN A FIRESTORE (El "Woki-Toki" con Google)
 // =====================================================================
@@ -39,6 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderizarCatalogo();
         renderizarFavoritos();
         renderizarInventario();
+        renderizarSelectorProductos();
     }, (error) => {
         console.error("Error al escuchar Firestore:", error);
     });
@@ -60,6 +70,26 @@ document.addEventListener('DOMContentLoaded', () => {
             renderizarInventario();
         });
     }
+
+    // Cambio de categoría en formulario: regenerar grid de talles
+    const selectCat = document.getElementById('inv-categoria');
+    if (selectCat) {
+        selectCat.addEventListener('change', (e) => {
+            renderizarStockGrid(e.target.value, {});
+        });
+    }
+
+    // Buscador selector de productos en venta (Etapa 3)
+    const inputVenta = document.getElementById('venta-busqueda');
+    if (inputVenta) {
+        inputVenta.addEventListener('input', (e) => {
+            terminoVentaBusqueda = e.target.value.toLowerCase();
+            renderizarSelectorProductos();
+        });
+    }
+
+    // Restaurar carrito de venta desde localStorage
+    renderizarCarritoVenta();
 });
 
 // =====================================================================
@@ -344,8 +374,9 @@ function renderizarInventario() {
         if (color)       metaParts.push(`Color: ${color}`);
         const meta = metaParts.join('  ');
 
-        const total = TALLAS_INV.reduce((s, t) => s + (stockPorTalla[t] || 0), 0);
-        const tallasHTML = TALLAS_INV.map(t => `
+        const tallasParaMostrar = TALLES_POR_CATEGORIA[p.categoria] || TALLAS_INV;
+        const total = tallasParaMostrar.reduce((s, t) => s + (stockPorTalla[t] || 0), 0);
+        const tallasHTML = tallasParaMostrar.map(t => `
             <span class="inv-talla-chip">
                 <span>${t}</span>
                 <em>${stockPorTalla[t] ?? 0}</em>
@@ -397,6 +428,20 @@ function filtrarInv(cat) {
     renderizarInventario();
 }
 
+function renderizarStockGrid(categoria, stockActual) {
+    const contenedor = document.getElementById('inv-stock-grid');
+    if (!contenedor) return;
+    const talles = TALLES_POR_CATEGORIA[categoria] || ['S', 'M', 'L', 'XL'];
+    contenedor.innerHTML = talles.map(t => `
+        <div class="inv-stock-item">
+            <span>${t}</span>
+            <input type="number"
+                   id="inv-stock-${t}"
+                   min="0"
+                   value="${(stockActual && stockActual[t] !== undefined) ? stockActual[t] : 0}">
+        </div>`).join('');
+}
+
 function abrirFormProducto(id) {
     productoEditandoId = id;
     const titulo = document.getElementById('form-titulo');
@@ -412,15 +457,11 @@ function abrirFormProducto(id) {
         document.getElementById('inv-categoria').value = p.categoria || '';
         document.getElementById('inv-color').value     = color;
         document.getElementById('inv-foto').value      = p.foto_url || p.imagen || '';
-        document.getElementById('inv-stock-s').value   = stockPorTalla.S  ?? 0;
-        document.getElementById('inv-stock-m').value   = stockPorTalla.M  ?? 0;
-        document.getElementById('inv-stock-l').value   = stockPorTalla.L  ?? 0;
-        document.getElementById('inv-stock-xl').value  = stockPorTalla.XL ?? 0;
+        renderizarStockGrid(p.categoria, stockPorTalla);
     } else {
         if (titulo) titulo.textContent = 'Agregar producto';
         document.getElementById('form-inventario-producto').reset();
-        ['inv-stock-s','inv-stock-m','inv-stock-l','inv-stock-xl']
-            .forEach(idCampo => { document.getElementById(idCampo).value = 0; });
+        renderizarStockGrid('', {});
     }
 
     navegarA('vista-form-producto');
@@ -434,11 +475,6 @@ function guardarProducto(e) {
     const categoria = document.getElementById('inv-categoria')?.value  || '';
     const colorRaw  = (document.getElementById('inv-color')?.value     || '').trim();
     const foto      = (document.getElementById('inv-foto')?.value      || '').trim();
-    const stockS    = parseInt(document.getElementById('inv-stock-s')?.value)  || 0;
-    const stockM    = parseInt(document.getElementById('inv-stock-m')?.value)  || 0;
-    const stockL    = parseInt(document.getElementById('inv-stock-l')?.value)  || 0;
-    const stockXL   = parseInt(document.getElementById('inv-stock-xl')?.value) || 0;
-
     if (!nombre || isNaN(precio) || !categoria) {
         alert('Completá los campos obligatorios: nombre, precio y categoría.');
         return;
@@ -447,9 +483,15 @@ function guardarProducto(e) {
     const colores = colorRaw
         ? colorRaw.split(',').map(c => c.trim()).filter(Boolean)
         : [];
-    const stockPorTalla = { S: stockS, M: stockM, L: stockL, XL: stockXL };
-    const tallas = Object.keys(stockPorTalla).filter(t => stockPorTalla[t] > 0);
-    const stock  = stockS + stockM + stockL + stockXL;
+
+    // Leer stock desde los inputs dinámicos según la categoría del producto
+    const tallesCat = TALLES_POR_CATEGORIA[categoria] || ['S', 'M', 'L', 'XL'];
+    const stockPorTalla = {};
+    tallesCat.forEach(t => {
+        stockPorTalla[t] = parseInt(document.getElementById(`inv-stock-${t}`)?.value) || 0;
+    });
+    const tallas = tallesCat.filter(t => stockPorTalla[t] > 0);
+    const stock  = tallesCat.reduce((s, t) => s + stockPorTalla[t], 0);
 
     const datos = { nombre, precio, categoria, colores, foto_url: foto, stockPorTalla, tallas, stock };
 
@@ -494,4 +536,370 @@ function eliminarProducto() {
         .finally(() => {
             if (btn) { btn.disabled = false; btn.textContent = 'Sí, eliminar'; }
         });
+}
+
+// =====================================================================
+// 8. FLUJO DE VENTA — ETAPA 3
+// =====================================================================
+
+// Talles por defecto según categoría (se usan cuando el producto no tiene tallas cargadas)
+const TALLES_POR_CATEGORIA = {
+    'Remeras':    ['S', 'M', 'L', 'XL'],
+    'Camperas':   ['S', 'M', 'L', 'XL'],
+    'Buzos':      ['S', 'M', 'L', 'XL'],
+    'Pantalones': ['36', '38', '40', '42', '44'],
+    'Shorts':     ['36', '38', '40', '42', '44'],
+};
+
+// Mapa de nombres de color → hex para los selectores de color
+const COLORES_HEX = {
+    negro: '#1E1E1E', blanco: '#F5F5F5', gris: '#9E9E9E',
+    rojo: '#FF6677', rosa: '#FFDFDF', verde: '#4CAF50',
+    azul: '#2196F3', amarillo: '#FFC107', naranja: '#FF9800',
+    terracota: '#C1694F', bordo: '#8B0000', bordó: '#8B0000',
+    celeste: '#87CEEB', chocolate: '#7B4F2E', beige: '#F5F0E8',
+    lila: '#CE93D8', violeta: '#673AB7', turquesa: '#00BCD4',
+    coral: '#FF6B6B', crema: '#FFFDD0', mostaza: '#FFDB58',
+};
+
+function obtenerHexColor(nombre) {
+    const key = (nombre || '').toLowerCase().trim();
+    return COLORES_HEX[key] || '#CCCCCC';
+}
+
+// ----- Entrada al flujo de venta -----
+
+function iniciarVenta() {
+    filtroVentaCategoria = 'Todos';
+    terminoVentaBusqueda = '';
+    const inputBusq = document.getElementById('venta-busqueda');
+    if (inputBusq) inputBusq.value = '';
+    document.querySelectorAll('#vista-seleccionar-producto .categorias-scroll .chip')
+        .forEach((c, i) => c.classList.toggle('active', i === 0));
+    renderizarSelectorProductos();
+    navegarA('vista-seleccionar-producto');
+}
+
+// ----- Lista de productos en modo venta -----
+
+function renderizarSelectorProductos() {
+    const lista = document.getElementById('venta-lista');
+    if (!lista) return;
+
+    const filtrados = listaPrendasGlobal.filter(p => {
+        const pasaCat  = filtroVentaCategoria === 'Todos' || p.categoria === filtroVentaCategoria;
+        const nombre   = (p.nombre || '').toLowerCase();
+        const pasaBusq = terminoVentaBusqueda === '' || nombre.includes(terminoVentaBusqueda);
+        return pasaCat && pasaBusq;
+    });
+
+    if (filtrados.length === 0) {
+        lista.innerHTML = '<p class="cargando" style="text-align:center;padding:30px 0;">No hay productos disponibles.</p>';
+        return;
+    }
+
+    const fotoFallback = 'https://placehold.co/56x56/FFDFDF/5A5A5A?text=Sin+Foto';
+    lista.innerHTML = filtrados.map(p => {
+        const foto = obtenerFotoProducto(p);
+        return `
+        <div class="venta-item" onclick="abrirProducto('${p.id}')">
+            <img class="venta-thumb"
+                 src="${foto || fotoFallback}"
+                 alt="${p.nombre}"
+                 onerror="this.src='${fotoFallback}'">
+            <div class="venta-info">
+                <h3 class="venta-nombre">${p.nombre}</h3>
+                <p class="venta-cat">${p.categoria || ''}</p>
+            </div>
+            <p class="venta-precio">$ ${(p.precio || 0).toLocaleString('es-AR')}</p>
+        </div>`;
+    }).join('');
+}
+
+function filtrarVenta(cat) {
+    filtroVentaCategoria = cat;
+    document.querySelectorAll('#vista-seleccionar-producto .categorias-scroll .chip')
+        .forEach(c => c.classList.remove('active'));
+    event.target.classList.add('active');
+    renderizarSelectorProductos();
+}
+
+// ----- Card de producto (detalle + selectores) -----
+
+function abrirProducto(id) {
+    const p = listaPrendasGlobal.find(prod => prod.id === id);
+    if (!p) return;
+
+    productoActual    = p;
+    tallaSeleccionada  = null;
+    colorSeleccionado  = null;
+    cantidadSeleccionada = 1;
+
+    const foto        = obtenerFotoProducto(p);
+    const fotoFallback = 'https://placehold.co/400x220/FFDFDF/5A5A5A?text=Sin+Foto';
+
+    // Determinar colores disponibles
+    const colores = Array.isArray(p.colores)
+        ? p.colores.filter(Boolean)
+        : (p.colores ? [p.colores] : []);
+
+    // Determinar talles disponibles.
+    // La categoría define el FORMATO de talles (S/M/L/XL o 36-44).
+    // Si stockPorTalla existe pero sus claves no coinciden con el formato esperado
+    // (ej: Pantalón con claves S/M/L/XL), se ignoran y se muestran los talles de categoría.
+    const stockPorTalla   = p.stockPorTalla || null;
+    const tallasArr       = Array.isArray(p.tallas) ? p.tallas : [];
+    const tallesEsperados = TALLES_POR_CATEGORIA[p.categoria] || null;
+    let tallasDisponibles;
+    let sinStock = false;
+
+    if (stockPorTalla && tallesEsperados) {
+        // Mostrar SIEMPRE todos los talles de la categoría, independientemente del stock.
+        // El stock 0 no oculta el talle; el botón "Sin stock" se activa solo si TODOS
+        // los talles esperados fueron cargados explícitamente con stock = 0.
+        tallasDisponibles = tallesEsperados;
+        const conStock             = tallesEsperados.filter(t => (stockPorTalla[t] || 0) > 0);
+        const clavesCorrectas      = tallesEsperados.every(t => t in stockPorTalla);
+        sinStock = conStock.length === 0 && clavesCorrectas;
+    } else if (stockPorTalla) {
+        // Categoría sin talles definidos en TALLES_POR_CATEGORIA: usar stockPorTalla directo
+        const conStock = Object.keys(stockPorTalla).filter(t => (stockPorTalla[t] || 0) > 0);
+        if (conStock.length > 0) {
+            tallasDisponibles = conStock;
+        } else {
+            sinStock = true;
+            tallasDisponibles = [];
+        }
+    } else if (tallasArr.length > 0) {
+        tallasDisponibles = tallasArr;
+    } else {
+        tallasDisponibles = tallesEsperados || ['S', 'M', 'L', 'XL'];
+    }
+
+    // HTML de selectores
+    const coloresHTML = colores.length > 0 ? `
+        <div class="producto-seccion">
+            <p class="producto-seccion-label">Color:</p>
+            <div class="producto-colores">
+                ${colores.map(c => `
+                    <button class="producto-color-circulo"
+                            style="background-color:${obtenerHexColor(c)}"
+                            data-color="${c}"
+                            onclick="seleccionarColor('${c}', this)"
+                            title="${c}"></button>`).join('')}
+            </div>
+        </div>` : '';
+
+    const tallasHTML = tallasDisponibles.length > 0 ? `
+        <div class="producto-seccion">
+            <p class="producto-seccion-label">Talle:</p>
+            <div class="producto-talles">
+                ${tallasDisponibles.map(t => `
+                    <button class="producto-talle-chip"
+                            data-talle="${t}"
+                            onclick="seleccionarTalla('${t}', this)">${t}</button>`).join('')}
+            </div>
+        </div>` : '';
+
+    const contenido = document.getElementById('producto-contenido');
+    if (!contenido) return;
+
+    contenido.innerHTML = `
+        <img class="producto-imagen"
+             src="${foto || fotoFallback}"
+             alt="${p.nombre}"
+             onerror="this.src='${fotoFallback}'">
+        <div class="producto-detalles">
+            <div class="producto-fila-top">
+                <h2 class="producto-nombre">${p.nombre}</h2>
+                <p class="producto-precio">$ ${(p.precio || 0).toLocaleString('es-AR')}</p>
+            </div>
+            ${p.descripcion ? `<p class="producto-desc">${p.descripcion}</p>` : ''}
+            ${p.categoria    ? `<p class="producto-cat"><i data-lucide="tag"></i>${p.categoria}</p>` : ''}
+            ${coloresHTML}
+            ${tallasHTML}
+            <div class="producto-seccion">
+                <p class="producto-seccion-label">Cantidad:</p>
+                <div class="producto-cantidad">
+                    <button class="cantidad-btn" onclick="cambiarCantidad(-1)">−</button>
+                    <span id="cantidad-display" class="cantidad-num">1</span>
+                    <button class="cantidad-btn" onclick="cambiarCantidad(1)">+</button>
+                </div>
+            </div>
+        </div>
+        <button class="btn-agregar-carrito btn-con-icono"
+                onclick="agregarAlCarritoVenta()"
+                ${sinStock ? 'disabled' : ''}>
+            <i data-lucide="shopping-cart"></i>
+            ${sinStock ? 'Sin stock disponible' : 'Agregar al carrito'}
+        </button>`;
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    navegarA('vista-producto');
+}
+
+function seleccionarTalla(talla, btn) {
+    tallaSeleccionada = talla;
+    document.querySelectorAll('.producto-talle-chip').forEach(c => c.classList.remove('activo'));
+    btn.classList.add('activo');
+}
+
+function seleccionarColor(color, btn) {
+    colorSeleccionado = color;
+    document.querySelectorAll('.producto-color-circulo').forEach(c => c.classList.remove('activo'));
+    btn.classList.add('activo');
+}
+
+function cambiarCantidad(delta) {
+    cantidadSeleccionada = Math.max(1, cantidadSeleccionada + delta);
+    const display = document.getElementById('cantidad-display');
+    if (display) display.textContent = cantidadSeleccionada;
+}
+
+function agregarAlCarritoVenta() {
+    if (!productoActual) return;
+
+    const colores = Array.isArray(productoActual.colores)
+        ? productoActual.colores.filter(Boolean)
+        : (productoActual.colores ? [productoActual.colores] : []);
+
+    // Todos los productos tienen selector de talle (por stockPorTalla, tallas[] o categoría)
+    if (!tallaSeleccionada) {
+        alert('Seleccioná un talle antes de agregar al carrito.');
+        return;
+    }
+    if (colores.length > 0 && !colorSeleccionado) {
+        alert('Seleccioná un color antes de agregar al carrito.');
+        return;
+    }
+
+    carritoVenta.push({
+        cartId:   Date.now() + Math.random(),
+        id:       productoActual.id,
+        nombre:   productoActual.nombre,
+        precio:   productoActual.precio,
+        talla:    tallaSeleccionada  || '',
+        color:    colorSeleccionado  || '',
+        cantidad: cantidadSeleccionada,
+        foto:     obtenerFotoProducto(productoActual),
+    });
+
+    sincronizarCarritoVenta();
+    renderizarCarritoVenta();
+    navegarA('vista-carrito-venta');
+}
+
+// ----- Carrito de venta -----
+
+function sincronizarCarritoVenta() {
+    localStorage.setItem('moniarquia_carrito_venta', JSON.stringify(carritoVenta));
+}
+
+function quitarDelCarritoVenta(cartId) {
+    carritoVenta = carritoVenta.filter(i => i.cartId !== cartId);
+    sincronizarCarritoVenta();
+    renderizarCarritoVenta();
+}
+
+function renderizarCarritoVenta() {
+    const lista   = document.getElementById('carrito-venta-lista');
+    const totalEl = document.getElementById('carrito-venta-total');
+    if (!lista) return;
+
+    if (carritoVenta.length === 0) {
+        lista.innerHTML = `
+            <div class="carrito-venta-vacio">
+                <p>El carrito está vacío.</p>
+                <button class="btn-outline" style="margin-top:12px;width:auto;padding:10px 20px;"
+                        onclick="navegarA('vista-seleccionar-producto')">
+                    Agregar productos
+                </button>
+            </div>`;
+        if (totalEl) totalEl.textContent = '$ 0';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        return;
+    }
+
+    const fotoFallback = 'https://placehold.co/52x52/FFDFDF/5A5A5A?text=Sin+Foto';
+    lista.innerHTML = carritoVenta.map(i => {
+        const infoParts = [];
+        if (i.talla)    infoParts.push(`Talle ${i.talla}`);
+        if (i.color)    infoParts.push(`Color: ${i.color}`);
+        infoParts.push(`Cantidad: ${i.cantidad}`);
+        const subtotal = (i.precio || 0) * (i.cantidad || 1);
+        return `
+        <div class="carrito-venta-item">
+            <img class="carrito-venta-thumb"
+                 src="${i.foto || fotoFallback}"
+                 alt="${i.nombre}"
+                 onerror="this.src='${fotoFallback}'">
+            <div class="carrito-venta-info">
+                <div class="carrito-venta-fila-top">
+                    <h4 class="carrito-venta-nombre">${i.nombre}</h4>
+                    <button class="inv-btn-accion inv-btn-eliminar"
+                            onclick="quitarDelCarritoVenta(${i.cartId})" title="Quitar">
+                        <i data-lucide="trash-2"></i>
+                    </button>
+                </div>
+                <p class="carrito-venta-meta">${infoParts.join(' · ')}</p>
+                <p class="carrito-venta-precio">$ ${subtotal.toLocaleString('es-AR')}</p>
+            </div>
+        </div>`;
+    }).join('');
+
+    const total = carritoVenta.reduce((s, i) => s + (i.precio || 0) * (i.cantidad || 1), 0);
+    if (totalEl) totalEl.textContent = '$ ' + total.toLocaleString('es-AR');
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function siguienteDesdeCarrito() {
+    if (carritoVenta.length === 0) {
+        alert('El carrito está vacío. Agregá al menos un producto.');
+        return;
+    }
+    navegarA('vista-asociar-cliente');
+}
+
+// ----- Pantalla de método de pago -----
+
+function irAMetodoPago() {
+    renderizarResumenVenta();
+    navegarA('vista-metodo-pago');
+}
+
+function renderizarResumenVenta() {
+    const lista   = document.getElementById('pago-resumen-items');
+    const totalEl = document.getElementById('pago-total');
+    if (!lista) return;
+
+    if (carritoVenta.length === 0) {
+        lista.innerHTML = '<p style="font-size:12px;color:var(--gris);">Sin productos.</p>';
+        if (totalEl) totalEl.textContent = '$ 0';
+        return;
+    }
+
+    const fotoFallback = 'https://placehold.co/44x44/FFDFDF/5A5A5A?text=Sin+Foto';
+    lista.innerHTML = carritoVenta.map(i => {
+        const metaParts = [];
+        if (i.talla)  metaParts.push(`Talle: ${i.talla}`);
+        if (i.color)  metaParts.push(`Color: ${i.color}`);
+        metaParts.push(`Cantidad: ${i.cantidad}`);
+        const subtotal = (i.precio || 0) * (i.cantidad || 1);
+        return `
+        <div class="pago-resumen-item">
+            <img class="pago-resumen-thumb"
+                 src="${i.foto || fotoFallback}"
+                 alt="${i.nombre}"
+                 onerror="this.src='${fotoFallback}'">
+            <div class="pago-resumen-info">
+                <p class="pago-resumen-nombre">${i.nombre}</p>
+                <p class="pago-resumen-meta">${metaParts.join(' · ')}</p>
+            </div>
+            <p class="pago-resumen-precio">$ ${subtotal.toLocaleString('es-AR')}</p>
+        </div>`;
+    }).join('');
+
+    const total = carritoVenta.reduce((s, i) => s + (i.precio || 0) * (i.cantidad || 1), 0);
+    if (totalEl) totalEl.textContent = '$ ' + total.toLocaleString('es-AR');
 }
