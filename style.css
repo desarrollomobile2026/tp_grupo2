@@ -76,7 +76,10 @@ body {
 }
 
 #app-container[data-vista="vista-inventario"] .header-titulo--inventario,
-#app-container[data-vista="vista-carrito-venta"] .header-titulo--carrito {
+#app-container[data-vista="vista-carrito-venta"] .header-titulo--carrito,
+#app-container[data-vista="vista-seleccionar-cliente"] .header-titulo--seleccionar-cliente,
+#app-container[data-vista="vista-metodo-pago"] .header-titulo--metodo-pago,
+#app-container[data-vista="vista-confirmar-pago"] .header-titulo--confirmar-pago {
     display: block;
 }
 
@@ -1082,6 +1085,238 @@ body {
 .btn-danger:active { transform: translateY(2px); }
 
 /* ==========================================
+   ETAPA 4: CLIENTES Y REGISTRO DE VENTAS
+   ========================================== */
+
+/* Lista de clientes (modo lista y modo selección comparten estilos) */
+.clientes-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.cliente-item {
+    background-color: var(--blanco);
+    border-radius: 12px;
+    border: 1px solid var(--negro-pleno);
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    box-shadow: var(--sombra);
+    transition: transform 0.1s;
+}
+
+.cliente-item:active { transform: scale(0.98); }
+
+.cliente-avatar {
+    width: 40px;
+    height: 40px;
+    background-color: var(--rosa-viejo);
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--blanco);
+    flex-shrink: 0;
+}
+
+.cliente-info { flex: 1; min-width: 0; }
+
+.cliente-nombre {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--negro-texto);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cliente-dato {
+    font-size: 11px;
+    color: var(--gris);
+    margin-top: 2px;
+}
+
+/* <i data-lucide="chevron-right"> → <svg class="cliente-chevron"> */
+.cliente-chevron {
+    width: 18px;
+    height: 18px;
+    stroke: var(--gris);
+    flex-shrink: 0;
+}
+
+/* Botón "Registrar nuevo cliente +" en modo selección */
+.selcliente-nuevo-btn {
+    background-color: var(--blanco);
+    border: 1.5px dashed var(--rojo-moniarquia);
+    border-radius: 12px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--rojo-moniarquia);
+    font-family: 'Inter', sans-serif;
+    flex-shrink: 0;
+    width: 100%;
+    text-align: left;
+    margin-bottom: 4px;
+}
+
+.selcliente-nuevo-btn svg {
+    width: 18px;
+    height: 18px;
+    stroke: var(--rojo-moniarquia);
+    flex-shrink: 0;
+}
+
+.selcliente-nuevo-btn span { flex: 1; }
+
+/* Pantallas de éxito (Cliente agregado / Pago registrado / Deuda registrada) */
+#vista-cliente-agregado,
+#vista-pago-registrado,
+#vista-deuda-registrada {
+    padding: 28px 20px 36px;
+    gap: 24px;
+}
+
+.exito-logo { text-align: center; }
+
+.exito-card {
+    background-color: var(--blanco);
+    border: 1px solid var(--negro-pleno);
+    border-radius: 16px;
+    padding: 28px 20px;
+    text-align: center;
+    box-shadow: var(--sombra);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.exito-icono-verde {
+    width: 64px;
+    height: 64px;
+    background-color: var(--verde-ok);
+    border-radius: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* <i data-lucide="check"> → <svg class="exito-check"> */
+.exito-check {
+    width: 32px;
+    height: 32px;
+    stroke: var(--blanco);
+    stroke-width: 3;
+}
+
+.exito-titulo {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--negro-texto);
+}
+
+.exito-desc {
+    font-size: 13px;
+    color: var(--gris);
+    line-height: 1.5;
+}
+
+.exito-monto {
+    font-weight: 700;
+    color: var(--rojo-moniarquia);
+}
+
+.exito-acciones {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: auto;
+}
+
+/* Confirmación de pago (Efectivo / Mercado Pago) */
+#vista-confirmar-pago,
+#vista-registrar-deuda {
+    gap: 20px;
+}
+
+.confirmar-pago-card {
+    background-color: var(--blanco);
+    border: 1px solid var(--negro-pleno);
+    border-radius: 16px;
+    padding: 28px 20px;
+    text-align: center;
+    box-shadow: var(--sombra);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.confirmar-pago-metodo {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--gris);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+}
+
+.confirmar-pago-total {
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--rojo-moniarquia);
+}
+
+.confirmar-pago-desc {
+    font-size: 13px;
+    color: var(--gris);
+    line-height: 1.4;
+    max-width: 260px;
+}
+
+.confirmar-pago-acciones {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: auto;
+}
+
+/* Cuenta corriente — formulario de deuda */
+.deuda-resumen-card {
+    background-color: var(--blanco);
+    border: 1px solid var(--negro-pleno);
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: var(--sombra);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.deuda-fila {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--negro-texto);
+}
+
+.deuda-fila-resultado {
+    padding-top: 12px;
+    border-top: 1px solid rgba(0,0,0,0.1);
+}
+
+/* ==========================================
    ETAPA 3: FLUJO DE VENTA
    ========================================== */
 
@@ -1714,6 +1949,15 @@ body {
     flex-direction: column;
     gap: 10px;
     flex-shrink: 0;
+    margin-top: auto;
+}
+
+#vista-metodo-pago .pago-resumen {
+    margin-top: 16px;
+}
+
+#vista-metodo-pago .pago-metodos {
+    margin-bottom: 48px;
 }
 
 .pago-metodo-item {
