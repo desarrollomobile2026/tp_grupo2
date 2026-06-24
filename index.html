@@ -30,6 +30,7 @@
         <span class="header-titulo header-titulo--metodo-pago">Método de pago</span>
         <span class="header-titulo header-titulo--confirmar-pago">Confirmar pago</span>
         <span class="header-titulo header-titulo--cambios">Cambio o devolución</span>
+        <span class="header-titulo header-titulo--escanear">Escanear producto</span>
         <button class="btn-nav" id="btn-menu" onclick="abrirMenu()">
             <i data-lucide="menu"></i>
         </button>
@@ -46,7 +47,7 @@
             </div>
         </div>
         <div class="home-cards">
-            <button class="home-card" onclick="iniciarVenta()">
+            <button class="home-card" onclick="abrirEscaneo()">
                 <div class="home-card-icono">
                     <i data-lucide="shopping-cart"></i>
                 </div>
@@ -237,6 +238,29 @@
     <!-- ============================================================
          ETAPA 3: FLUJO DE VENTA
          ============================================================ -->
+
+    <!-- 0. Escanear producto (cámara) -->
+    <main id="vista-escanear" class="vista">
+        <p class="vista-desc escaner-guia">Apuntá la cámara al código del producto</p>
+
+        <div class="escaner-contenedor">
+            <video id="escaner-video" class="escaner-video" autoplay playsinline muted></video>
+            <div class="escaner-marco">
+                <span class="escaner-corner tl"></span>
+                <span class="escaner-corner tr"></span>
+                <span class="escaner-corner bl"></span>
+                <span class="escaner-corner br"></span>
+            </div>
+            <div id="escaner-estado" class="escaner-estado" style="display:none;"></div>
+        </div>
+
+        <div class="escaner-acciones">
+            <button class="btn-primary btn-con-icono" onclick="buscarManualmente()">
+                <i data-lucide="search"></i>
+                Buscar producto manualmente
+            </button>
+        </div>
+    </main>
 
     <!-- 1. Selección de producto (modo venta) -->
     <main id="vista-seleccionar-producto" class="vista">
