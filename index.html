@@ -25,6 +25,7 @@
         </button>
         <span class="header-titulo header-titulo--inventario">Inventario</span>
         <span class="header-titulo header-titulo--carrito">Carrito</span>
+        <span class="header-titulo header-titulo--historial-cliente">Movimientos</span>
         <span class="header-titulo header-titulo--seleccionar-cliente">Asociar a cliente</span>
         <span class="header-titulo header-titulo--metodo-pago">Método de pago</span>
         <span class="header-titulo header-titulo--confirmar-pago">Confirmar pago</span>
@@ -227,7 +228,7 @@
             <p class="confirmar-desc">El producto se eliminará permanentemente del inventario.</p>
         </div>
         <div class="confirmar-acciones">
-            <button class="btn-outline" onclick="navegarA('vista-inventario')">Cancelar</button>
+            <button class="btn-outline" onclick="volverAtras()">Cancelar</button>
             <button class="btn-danger" onclick="eliminarProducto()">Sí, eliminar</button>
         </div>
     </main>
@@ -466,7 +467,7 @@
                 <i data-lucide="check-circle"></i>
                 Confirmar pago
             </button>
-            <button class="btn-outline" onclick="navegarA('vista-metodo-pago')">Cancelar</button>
+            <button class="btn-outline" onclick="volverAtras()">Cancelar</button>
         </div>
     </main>
 
@@ -496,7 +497,7 @@
                 <i data-lucide="notebook-pen"></i>
                 Registrar deuda
             </button>
-            <button class="btn-outline" onclick="navegarA('vista-metodo-pago')">Cancelar</button>
+            <button class="btn-outline" onclick="volverAtras()">Cancelar</button>
         </div>
     </main>
 
@@ -520,7 +521,7 @@
         </div>
         <div class="exito-acciones">
             <button class="btn-primary" onclick="nuevaVenta()">Nueva venta</button>
-            <button class="btn-outline" onclick="navegarA('vista-home')">Ir al inicio</button>
+            <button class="btn-outline" onclick="irAlInicio()">Ir al inicio</button>
         </div>
     </main>
 
@@ -547,7 +548,105 @@
         </div>
         <div class="exito-acciones">
             <button class="btn-primary" onclick="nuevaVenta()">Nueva venta</button>
-            <button class="btn-outline" onclick="navegarA('vista-home')">Ir al inicio</button>
+            <button class="btn-outline" onclick="irAlInicio()">Ir al inicio</button>
+        </div>
+    </main>
+
+    <!-- ============================================================
+         ETAPA 6: CUENTA CORRIENTE Y DETALLE DE CLIENTE
+         ============================================================ -->
+
+    <!-- 1. Detalle de cliente -->
+    <main id="vista-detalle-cliente" class="vista">
+        <div class="detalle-cliente-perfil">
+            <div id="detalle-avatar" class="detalle-avatar">?</div>
+            <div class="detalle-info">
+                <h2 id="detalle-nombre" class="detalle-nombre">-</h2>
+                <p id="detalle-telefono" class="detalle-dato"></p>
+                <p id="detalle-email" class="detalle-dato"></p>
+            </div>
+        </div>
+        <div class="detalle-saldo-wrap">
+            <p class="detalle-saldo-label">Saldo pendiente</p>
+            <p id="detalle-saldo" class="detalle-saldo detalle-saldo--ok">$ 0</p>
+        </div>
+        <div class="detalle-acciones">
+            <button class="btn-primary" id="btn-registrar-pago" onclick="abrirRegistrarPago()">
+                Registrar pago
+            </button>
+            <button class="btn-outline" onclick="abrirHistorialCliente()">Ver movimientos</button>
+            <button class="btn-outline" onclick="abrirHistorialCompras()">Ver compras</button>
+        </div>
+    </main>
+
+    <!-- 2. Historial de movimientos (cuenta corriente) -->
+    <main id="vista-historial-cliente" class="vista">
+        <p class="vista-desc" id="historial-cliente-nombre"></p>
+        <div id="historial-lista" class="historial-lista">
+            <p class="cargando">Cargando movimientos...</p>
+        </div>
+    </main>
+
+    <!-- 3. Historial de compras -->
+    <main id="vista-historial-compras" class="vista">
+        <div class="vista-header">
+            <h2 class="section-title">Compras</h2>
+            <p class="vista-desc" id="compras-cliente-nombre"></p>
+        </div>
+        <div id="compras-lista" class="historial-lista">
+            <p class="cargando">Cargando compras...</p>
+        </div>
+    </main>
+
+    <!-- 4. Formulario de pago -->
+    <main id="vista-registrar-pago" class="vista">
+        <div class="vista-header">
+            <h2 class="section-title">Registrar pago</h2>
+        </div>
+        <div class="pago-cc-cliente-wrap">
+            <p id="pago-cc-nombre" class="pago-cc-nombre">-</p>
+            <div class="deuda-fila">
+                <span>Saldo pendiente:</span>
+                <span id="pago-saldo-actual" class="monto-destacado">$ 0</span>
+            </div>
+        </div>
+        <form class="form-moniarquia" onsubmit="guardarPagoCliente(event)">
+            <div class="input-group">
+                <label>Monto a abonar ($)</label>
+                <input type="number" id="pago-monto" min="1" placeholder="Ej: 15000"
+                       required oninput="actualizarSaldoRestante()">
+            </div>
+            <div class="deuda-fila deuda-fila-resultado">
+                <span>Saldo restante:</span>
+                <span id="pago-saldo-restante" class="monto-destacado">$ 0</span>
+            </div>
+            <button type="submit" class="btn-primary btn-submit" id="btn-guardar-pago">
+                Confirmar pago
+            </button>
+        </form>
+    </main>
+
+    <!-- 5. Pago registrado (cuenta corriente) -->
+    <main id="vista-pago-cliente-ok" class="vista">
+        <div class="exito-logo">
+            <h1 class="logo-text">Moniarquía</h1>
+            <p class="sub-logo">INDUMENTARIA</p>
+            <div class="home-deco">
+                <span class="deco-line"></span>
+                <i data-lucide="heart" class="deco-heart"></i>
+                <span class="deco-line"></span>
+            </div>
+        </div>
+        <div class="exito-card">
+            <div class="exito-icono-verde">
+                <i data-lucide="check" class="exito-check"></i>
+            </div>
+            <h2 class="exito-titulo">¡Pago registrado!</h2>
+            <p class="exito-desc" id="pago-ok-desc">El pago fue registrado correctamente.</p>
+        </div>
+        <div class="exito-acciones">
+            <button class="btn-primary" onclick="volverAlDetalleCliente()">Volver al cliente</button>
+            <button class="btn-outline" onclick="irAlInicio()">Ir al inicio</button>
         </div>
     </main>
 
