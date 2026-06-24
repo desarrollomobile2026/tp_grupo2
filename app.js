@@ -14,6 +14,9 @@ let terminoInvBusqueda = "";
 let productoEditandoId = null;
 let productoAEliminar = null;
 
+// Stack de navegación (Back button)
+let historialNavegacion = [];
+
 // Estado del flujo de venta (Etapa 3)
 let carritoVenta = JSON.parse(localStorage.getItem('moniarquia_carrito_venta')) || [];
 let productoActual = null;
@@ -313,7 +316,16 @@ function filtrarCategoria(cat) {
 // 6. NAVEGACIÓN Y MENÚ HAMBURGUESA (Etapa 1)
 // =====================================================================
 
-function navegarA(vistaId) {
+function navegarA(vistaId, opciones) {
+    const silencioso = opciones?.silencioso === true;
+
+    if (!silencioso) {
+        const vistaActualEl = document.querySelector('.vista.active');
+        if (vistaActualEl?.id && vistaActualEl.id !== vistaId) {
+            historialNavegacion.push(vistaActualEl.id);
+        }
+    }
+
     document.querySelectorAll('.vista').forEach(v => v.classList.remove('active'));
     const destino = document.getElementById(vistaId);
     if (destino) {
@@ -324,12 +336,22 @@ function navegarA(vistaId) {
     if (btnVolver) {
         btnVolver.style.visibility = (vistaId === 'vista-home') ? 'hidden' : 'visible';
     }
-    // Actualiza data-vista para controlar estilos contextuales (ej: color del header)
     document.getElementById('app-container')?.setAttribute('data-vista', vistaId);
 }
 
 function volverAtras() {
-    navegarA('vista-home');
+    if (historialNavegacion.length > 0) {
+        const anterior = historialNavegacion.pop();
+        navegarA(anterior, { silencioso: true });
+    } else {
+        navegarA('vista-home', { silencioso: true });
+    }
+}
+
+// Ir al inicio limpiando el historial (usado en pantallas de éxito)
+function irAlInicio() {
+    historialNavegacion = [];
+    navegarA('vista-home', { silencioso: true });
 }
 
 function abrirMenu() {
@@ -532,7 +554,7 @@ function guardarProducto(e) {
           });
 
     operacion
-        .then(() => navegarA('vista-inventario'))
+        .then(() => navegarA('vista-inventario', { silencioso: true }))
         .catch(err => alert('Error al guardar: ' + err.message))
         .finally(() => {
             if (btn) { btn.disabled = false; btn.textContent = 'Guardar producto'; }
@@ -555,7 +577,7 @@ function eliminarProducto() {
     db.collection('productos').doc(productoAEliminar).delete()
         .then(() => {
             productoAEliminar = null;
-            navegarA('vista-inventario');
+            navegarA('vista-inventario', { silencioso: true });
         })
         .catch(err => alert('Error al eliminar: ' + err.message))
         .finally(() => {
@@ -891,7 +913,7 @@ function siguienteDesdeCarrito() {
 function irAMetodoPago() {
     renderizarResumenVenta();
     actualizarSeccionClienteEnPago();
-    navegarA('vista-metodo-pago');
+    navegarA('vista-metodo-pago', { silencioso: true });
 }
 
 // =====================================================================
@@ -916,7 +938,7 @@ function renderizarListaClientes(contenedorId, modoSeleccion) {
 
     const onclick = modoSeleccion
         ? id => `seleccionarClienteParaVenta('${id}')`
-        : () => `mostrarProximamente('Detalle de cliente')`;
+        : id => `abrirDetalleCliente('${id}')`;
 
     contenedor.innerHTML = filtrados.map(c => {
         const inicial = (c.nombre || '?')[0].toUpperCase();
@@ -1017,7 +1039,7 @@ function guardarCliente(e) {
         if (origenAgregarCliente === 'venta') {
             clienteSeleccionado = { id: docRef.id, nombre, telefono, email, deudaTotal: 0 };
         }
-        navegarA('vista-cliente-agregado');
+        navegarA('vista-cliente-agregado', { silencioso: true });
     })
     .catch(err => alert('Error al guardar cliente: ' + err.message))
     .finally(() => {
@@ -1030,7 +1052,7 @@ function continuarTrasAgregarCliente() {
         actualizarSeccionClienteEnPago();
         irAMetodoPago();
     } else {
-        navegarA('vista-clientes');
+        volverAtras(); // pop vista-agregar-cliente → vuelve a vista-clientes
     }
 }
 
@@ -1171,9 +1193,9 @@ function registrarVenta({ metodoPago, montoAbonado, deuda, estado }) {
             if (metodoPago === 'cuenta_corriente') {
                 const montoEl = document.getElementById('deuda-registrada-monto');
                 if (montoEl) montoEl.textContent = '$ ' + montoDeuda.toLocaleString('es-AR');
-                navegarA('vista-deuda-registrada');
+                navegarA('vista-deuda-registrada', { silencioso: true });
             } else {
-                navegarA('vista-pago-registrado');
+                navegarA('vista-pago-registrado', { silencioso: true });
             }
         })
         .catch(err => {
@@ -1186,12 +1208,314 @@ function registrarVenta({ metodoPago, montoAbonado, deuda, estado }) {
 }
 
 function nuevaVenta() {
+    historialNavegacion = [];    // reset completo: empieza un flujo nuevo
     carritoVenta = [];
     sincronizarCarritoVenta();
     renderizarCarritoVenta();
     clienteSeleccionado = null;
     metodoPagoActual    = null;
     iniciarVenta();
+}
+
+// =====================================================================
+// 11. CUENTA CORRIENTE Y DETALLE DE CLIENTE — ETAPA 6
+// =====================================================================
+
+let clienteActual           = null;
+let movimientosClienteActual = [];
+let ventasClienteActual     = [];
+let ventasPorId             = {}; // caché de ventas indexadas por ID
+let unsubscribeMovimientos  = null;
+
+function abrirDetalleCliente(id) {
+    const c = listClientesGlobal.find(cl => cl.id === id);
+    if (!c) return;
+    clienteActual = c;
+
+    // Limpiar suscripción anterior
+    if (unsubscribeMovimientos) {
+        unsubscribeMovimientos();
+        unsubscribeMovimientos = null;
+    }
+
+    // Suscripción en tiempo real a los movimientos de este cliente
+    unsubscribeMovimientos = db.collection('cuentaCorriente')
+        .where('clienteId', '==', id)
+        .onSnapshot(snapshot => {
+            movimientosClienteActual = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            movimientosClienteActual.sort((a, b) => {
+                const fa = a.fecha?.toDate?.() || new Date(0);
+                const fb = b.fecha?.toDate?.() || new Date(0);
+                return fb - fa;
+            });
+            renderizarMovimientos();
+            renderizarDetalleCliente(); // actualiza saldo si el detalle está visible
+        }, err => console.error('Error movimientos:', err));
+
+    renderizarDetalleCliente();
+    navegarA('vista-detalle-cliente');
+}
+
+function renderizarDetalleCliente() {
+    if (!clienteActual) return;
+
+    // Refrescar desde el onSnapshot de clientes (siempre actualizado)
+    const fresco = listClientesGlobal.find(c => c.id === clienteActual.id) || clienteActual;
+    clienteActual = fresco;
+
+    const deuda   = fresco.deudaTotal || 0;
+    const inicial = (fresco.nombre || '?')[0].toUpperCase();
+
+    const avatarEl  = document.getElementById('detalle-avatar');
+    const nombreEl  = document.getElementById('detalle-nombre');
+    const telEl     = document.getElementById('detalle-telefono');
+    const emailEl   = document.getElementById('detalle-email');
+    const saldoEl   = document.getElementById('detalle-saldo');
+    const btnPagoEl = document.getElementById('btn-registrar-pago');
+
+    if (avatarEl)  avatarEl.textContent  = inicial;
+    if (nombreEl)  nombreEl.textContent  = fresco.nombre   || '-';
+    if (telEl)     telEl.textContent     = fresco.telefono || '';
+    if (emailEl)   emailEl.textContent   = fresco.email    || '';
+
+    if (saldoEl) {
+        saldoEl.textContent = '$ ' + deuda.toLocaleString('es-AR');
+        saldoEl.className   = 'detalle-saldo ' + (deuda > 0 ? 'detalle-saldo--deuda' : 'detalle-saldo--ok');
+    }
+    if (btnPagoEl) btnPagoEl.disabled = deuda <= 0;
+}
+
+function abrirHistorialCliente() {
+    if (!clienteActual) return;
+    const el = document.getElementById('historial-cliente-nombre');
+    if (el) el.textContent = clienteActual.nombre || '';
+
+    const lista = document.getElementById('historial-lista');
+    if (lista) lista.innerHTML = '<p class="cargando" style="text-align:center;padding:24px 0;">Cargando movimientos...</p>';
+
+    navegarA('vista-historial-cliente');
+
+    // Pre-fetchar ventas referenciadas antes de renderizar
+    cargarVentasParaMovimientos().then(() => renderizarMovimientos());
+}
+
+function cargarVentasParaMovimientos() {
+    const idsNecesarios = movimientosClienteActual
+        .filter(m => m.tipo === 'deuda' && m.ventaId && !ventasPorId[m.ventaId])
+        .map(m => m.ventaId);
+
+    if (idsNecesarios.length === 0) return Promise.resolve();
+
+    return Promise.all(idsNecesarios.map(id => db.collection('ventas').doc(id).get()))
+        .then(docs => {
+            docs.forEach(doc => {
+                if (doc.exists) ventasPorId[doc.id] = { id: doc.id, ...doc.data() };
+            });
+        })
+        .catch(err => console.error('Error al cargar ventas para movimientos:', err));
+}
+
+function renderizarMovimientos() {
+    const lista = document.getElementById('historial-lista');
+    if (!lista) return;
+
+    if (movimientosClienteActual.length === 0) {
+        lista.innerHTML = '<p class="cargando" style="text-align:center;padding:24px 0;">Sin movimientos registrados.</p>';
+        return;
+    }
+
+    lista.innerHTML = movimientosClienteActual.map(m => {
+        const esDeuda = m.tipo === 'deuda';
+        const signo   = esDeuda ? '−' : '+';
+        const clase   = esDeuda ? 'mov-deuda' : 'mov-pago';
+        const icono   = esDeuda ? 'trending-down' : 'trending-up';
+        const fecha   = m.fecha?.toDate?.()
+            ? m.fecha.toDate().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' })
+            : '—';
+
+        // Card enriquecida para deudas con ventaId
+        let detalleHTML = '';
+        if (esDeuda && m.ventaId && ventasPorId[m.ventaId]) {
+            const venta    = ventasPorId[m.ventaId];
+            const productos = (venta.items || []).map(i => i.nombre).join(', ');
+            const total    = (venta.total || 0).toLocaleString('es-AR');
+            const abonado  = (venta.montoAbonado || 0).toLocaleString('es-AR');
+            const adeudado = (m.monto || 0).toLocaleString('es-AR');
+            detalleHTML = `
+                ${productos ? `<p class="mov-productos">${productos}</p>` : ''}
+                <div class="mov-detalle-venta">
+                    <span>Total venta: <strong>$ ${total}</strong></span>
+                    <span>Abonado: <strong>$ ${abonado}</strong></span>
+                    <span class="mov-adeudado">Adeudado: <strong>$ ${adeudado}</strong></span>
+                </div>`;
+        }
+
+        return `
+        <div class="mov-item ${clase}">
+            <div class="mov-icono"><i data-lucide="${icono}"></i></div>
+            <div class="mov-info">
+                <p class="mov-desc">${m.descripcion || (esDeuda ? 'Deuda' : 'Pago')}</p>
+                <p class="mov-fecha">${fecha}</p>
+                ${detalleHTML}
+            </div>
+            <p class="mov-monto">${signo} $ ${(m.monto || 0).toLocaleString('es-AR')}</p>
+        </div>`;
+    }).join('');
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function abrirHistorialCompras() {
+    if (!clienteActual) return;
+    const el = document.getElementById('compras-cliente-nombre');
+    if (el) el.textContent = clienteActual.nombre || '';
+
+    const lista = document.getElementById('compras-lista');
+    if (lista) lista.innerHTML = '<p class="cargando" style="text-align:center;padding:24px 0;">Cargando compras...</p>';
+
+    navegarA('vista-historial-compras');
+
+    db.collection('ventas')
+        .where('clienteId', '==', clienteActual.id)
+        .get()
+        .then(snapshot => {
+            ventasClienteActual = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            ventasClienteActual.sort((a, b) => {
+                const fa = a.fecha?.toDate?.() || new Date(0);
+                const fb = b.fecha?.toDate?.() || new Date(0);
+                return fb - fa;
+            });
+            renderizarVentasCliente();
+        })
+        .catch(err => {
+            if (lista) lista.innerHTML = '<p class="cargando" style="text-align:center;padding:24px 0;">Error al cargar compras.</p>';
+            console.error('Error compras:', err);
+        });
+}
+
+function renderizarVentasCliente() {
+    const lista = document.getElementById('compras-lista');
+    if (!lista) return;
+
+    // Poblar el caché para que "Ver movimientos" ya tenga los datos
+    ventasClienteActual.forEach(v => { ventasPorId[v.id] = v; });
+
+    if (ventasClienteActual.length === 0) {
+        lista.innerHTML = '<p class="cargando" style="text-align:center;padding:24px 0;">Sin compras registradas.</p>';
+        return;
+    }
+
+    const METODO = { efectivo: 'Efectivo', mercadopago: 'Mercado Pago', cuenta_corriente: 'Cta. cte.' };
+
+    lista.innerHTML = ventasClienteActual.map(v => {
+        const fecha   = v.fecha?.toDate?.()
+            ? v.fecha.toDate().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' })
+            : '—';
+        const metodo  = METODO[v.metodoPago] || v.metodoPago || '—';
+        const itemsStr = (v.items || []).map(i => `${i.nombre} x${i.cantidad}`).join(', ');
+        return `
+        <div class="compra-item">
+            <div class="compra-info">
+                <p class="compra-fecha">${fecha} · ${metodo}</p>
+                <p class="compra-items">${itemsStr || '—'}</p>
+            </div>
+            <p class="compra-total">$ ${(v.total || 0).toLocaleString('es-AR')}</p>
+        </div>`;
+    }).join('');
+}
+
+function abrirRegistrarPago() {
+    if (!clienteActual) return;
+
+    const fresco = listClientesGlobal.find(c => c.id === clienteActual.id) || clienteActual;
+    clienteActual = fresco;
+    const deuda  = fresco.deudaTotal || 0;
+
+    if (deuda <= 0) {
+        alert('Este cliente no tiene deuda pendiente.');
+        return;
+    }
+
+    const nombreEl  = document.getElementById('pago-cc-nombre');
+    const saldoEl   = document.getElementById('pago-saldo-actual');
+    const restEl    = document.getElementById('pago-saldo-restante');
+    const montoInput = document.getElementById('pago-monto');
+
+    if (nombreEl)   nombreEl.textContent  = fresco.nombre || '';
+    if (saldoEl)    saldoEl.textContent   = '$ ' + deuda.toLocaleString('es-AR');
+    if (montoInput) montoInput.value      = deuda;         // default: pago total
+    if (restEl)     restEl.textContent    = '$ 0';         // saldo restante si paga todo
+
+    navegarA('vista-registrar-pago');
+}
+
+function actualizarSaldoRestante() {
+    const fresco  = listClientesGlobal.find(c => c.id === clienteActual?.id) || clienteActual;
+    const deuda   = fresco?.deudaTotal || 0;
+    const monto   = Math.max(0, parseFloat(document.getElementById('pago-monto')?.value) || 0);
+    const restante = Math.max(0, deuda - monto);
+    const el = document.getElementById('pago-saldo-restante');
+    if (el) el.textContent = '$ ' + restante.toLocaleString('es-AR');
+}
+
+function guardarPagoCliente(e) {
+    e.preventDefault();
+    if (!clienteActual) return;
+
+    const fresco  = listClientesGlobal.find(c => c.id === clienteActual.id) || clienteActual;
+    const deuda   = fresco.deudaTotal || 0;
+    const monto   = parseFloat(document.getElementById('pago-monto')?.value) || 0;
+
+    if (monto <= 0) {
+        alert('El monto debe ser mayor a $0.');
+        return;
+    }
+    if (monto > deuda) {
+        alert(`El monto no puede superar el saldo pendiente de $ ${deuda.toLocaleString('es-AR')}.`);
+        return;
+    }
+
+    const montoPago = Math.min(monto, deuda); // clampeado por seguridad
+
+    const btn = document.getElementById('btn-guardar-pago');
+    if (btn) { btn.disabled = true; btn.textContent = 'Registrando...'; }
+
+    const batch  = db.batch();
+
+    const pagoRef = db.collection('cuentaCorriente').doc();
+    batch.set(pagoRef, {
+        clienteId:   clienteActual.id,
+        tipo:        'pago',
+        monto:       montoPago,
+        descripcion: 'Pago registrado',
+        fecha:       firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    const cliRef = db.collection('clientes').doc(clienteActual.id);
+    batch.update(cliRef, {
+        deudaTotal: firebase.firestore.FieldValue.increment(-montoPago)
+    });
+
+    batch.commit()
+        .then(() => {
+            const saldoRestante = Math.max(0, deuda - montoPago);
+            const descEl = document.getElementById('pago-ok-desc');
+            if (descEl) {
+                descEl.textContent = saldoRestante > 0
+                    ? `Pago de $ ${montoPago.toLocaleString('es-AR')} registrado. Saldo restante: $ ${saldoRestante.toLocaleString('es-AR')}.`
+                    : `Pago de $ ${montoPago.toLocaleString('es-AR')} registrado. La deuda quedó saldada.`;
+            }
+            navegarA('vista-pago-cliente-ok', { silencioso: true });
+        })
+        .catch(err => alert('Error al registrar pago: ' + err.message))
+        .finally(() => {
+            if (btn) { btn.disabled = false; btn.textContent = 'Confirmar pago'; }
+        });
+}
+
+function volverAlDetalleCliente() {
+    renderizarDetalleCliente();
+    volverAtras();  // pop vista-registrar-pago → vuelve a vista-detalle-cliente
 }
 
 function renderizarResumenVenta() {
