@@ -25,6 +25,9 @@
         </button>
         <span class="header-titulo header-titulo--inventario">Inventario</span>
         <span class="header-titulo header-titulo--carrito">Carrito</span>
+        <span class="header-titulo header-titulo--seleccionar-cliente">Asociar a cliente</span>
+        <span class="header-titulo header-titulo--metodo-pago">Método de pago</span>
+        <span class="header-titulo header-titulo--confirmar-pago">Confirmar pago</span>
         <button class="btn-nav" id="btn-menu" onclick="abrirMenu()">
             <i data-lucide="menu"></i>
         </button>
@@ -317,17 +320,16 @@
             <p class="asociar-desc">Podrás buscar un cliente o registrar uno nuevo.</p>
         </div>
         <div class="asociar-botones">
-            <button class="btn-primary asociar-btn-si" onclick="mostrarProximamente('Asociar cliente')">Sí</button>
+            <button class="btn-primary asociar-btn-si" onclick="irASeleccionarCliente()">Sí</button>
             <button class="btn-outline asociar-btn-no" onclick="irAMetodoPago()">No</button>
         </div>
     </main>
 
     <!-- 5. Método de pago (visual, sin registro en Etapa 3) -->
     <main id="vista-metodo-pago" class="vista">
-        <h2 class="section-title">Elegí la forma de pago</h2>
         <p class="vista-desc">Seleccioná cómo querés cobrar esta venta</p>
 
-        <div class="pago-cliente-wrap">
+        <div id="pago-cliente-wrap" class="pago-cliente-wrap">
             <div class="pago-cliente-avatar">
                 <i data-lucide="user"></i>
             </div>
@@ -335,7 +337,7 @@
                 <p class="pago-cliente-nombre">Sin cliente asociado</p>
                 <p class="pago-cliente-dato">Venta anónima</p>
             </div>
-            <button class="pago-btn-cambiar" onclick="mostrarProximamente('Cambiar cliente')">
+            <button class="pago-btn-cambiar" onclick="irASeleccionarCliente()">
                 Cambiar cliente
             </button>
         </div>
@@ -352,21 +354,200 @@
         </div>
 
         <div class="pago-metodos">
-            <button class="pago-metodo-item" onclick="mostrarProximamente('Efectivo')">
+            <button class="pago-metodo-item" onclick="seleccionarMetodoPago('efectivo')">
                 <i data-lucide="banknote"></i>
                 <span>Efectivo</span>
                 <i data-lucide="chevron-right" class="pago-chevron"></i>
             </button>
-            <button class="pago-metodo-item" onclick="mostrarProximamente('Mercado Pago')">
+            <button class="pago-metodo-item" onclick="seleccionarMetodoPago('mercadopago')">
                 <i data-lucide="credit-card"></i>
                 <span>Mercado Pago</span>
                 <i data-lucide="chevron-right" class="pago-chevron"></i>
             </button>
-            <button class="pago-metodo-item" onclick="mostrarProximamente('Cuenta corriente')">
+            <button class="pago-metodo-item" onclick="seleccionarMetodoPago('cuenta_corriente')">
                 <i data-lucide="notebook-pen"></i>
                 <span>Cuenta corriente</span>
                 <i data-lucide="chevron-right" class="pago-chevron"></i>
             </button>
+        </div>
+    </main>
+
+    <!-- ============================================================
+         ETAPA 4: CLIENTES Y REGISTRO DE VENTAS
+         ============================================================ -->
+
+    <!-- 1. Lista de clientes (desde menú) -->
+    <main id="vista-clientes" class="vista">
+        <div class="inv-header">
+            <p class="vista-desc inv-subtitulo">Gestioná tu cartera de clientes</p>
+            <button class="btn-agregar" onclick="irAAgregarCliente('lista')" title="Agregar cliente">
+                <i data-lucide="plus"></i>
+            </button>
+        </div>
+        <div class="search-box">
+            <i data-lucide="search" class="search-lucide-icon"></i>
+            <input type="text" id="clientes-busqueda" placeholder="Buscar por nombre...">
+        </div>
+        <div id="clientes-lista" class="clientes-lista">
+            <p class="cargando">Cargando clientes...</p>
+        </div>
+    </main>
+
+    <!-- 2. Seleccionar cliente durante el flujo de venta -->
+    <main id="vista-seleccionar-cliente" class="vista">
+        <p class="vista-desc">Seleccioná un cliente de la lista o registrá uno nuevo</p>
+        <div class="search-box">
+            <i data-lucide="search" class="search-lucide-icon"></i>
+            <input type="text" id="seleccionar-busqueda" placeholder="Buscar por nombre...">
+        </div>
+        <button class="selcliente-nuevo-btn" onclick="irAAgregarCliente('venta')">
+            <i data-lucide="user-plus"></i>
+            <span>Registrar nuevo cliente</span>
+            <i data-lucide="plus-circle"></i>
+        </button>
+        <div id="seleccionar-lista" class="clientes-lista">
+            <p class="cargando">Cargando clientes...</p>
+        </div>
+    </main>
+
+    <!-- 3. Formulario alta de cliente -->
+    <main id="vista-agregar-cliente" class="vista">
+        <div class="vista-header">
+            <h2 class="section-title">Agregar cliente</h2>
+            <p class="vista-desc">Completá los datos para registrar un nuevo cliente</p>
+        </div>
+        <form id="form-agregar-cliente" class="form-moniarquia" onsubmit="guardarCliente(event)">
+            <div class="input-group">
+                <label>Nombre completo</label>
+                <input type="text" id="cli-nombre" placeholder="Ej: María del Carmen" required>
+            </div>
+            <div class="input-group">
+                <label>Teléfono</label>
+                <input type="tel" id="cli-telefono" placeholder="Ej: +54 9 11 1234-5678">
+            </div>
+            <div class="input-group">
+                <label>Correo</label>
+                <input type="email" id="cli-email" placeholder="Ej: maria@gmail.com">
+            </div>
+            <button type="submit" class="btn-primary btn-submit" id="btn-guardar-cliente">Agregar</button>
+        </form>
+    </main>
+
+    <!-- 4. Confirmación cliente agregado -->
+    <main id="vista-cliente-agregado" class="vista">
+        <div class="exito-logo">
+            <h1 class="logo-text">Moniarquía</h1>
+            <p class="sub-logo">INDUMENTARIA</p>
+            <div class="home-deco">
+                <span class="deco-line"></span>
+                <i data-lucide="heart" class="deco-heart"></i>
+                <span class="deco-line"></span>
+            </div>
+        </div>
+        <div class="exito-card">
+            <div class="exito-icono-verde">
+                <i data-lucide="check" class="exito-check"></i>
+            </div>
+            <h2 class="exito-titulo">¡Cliente agregado!</h2>
+            <p class="exito-desc">El nuevo perfil se creó exitosamente.</p>
+        </div>
+        <button class="btn-primary" onclick="continuarTrasAgregarCliente()">Continuar</button>
+    </main>
+
+    <!-- 5. Confirmar pago (Efectivo / Mercado Pago) -->
+    <main id="vista-confirmar-pago" class="vista">
+        <div class="confirmar-pago-card">
+            <p class="confirmar-pago-metodo" id="confirmar-pago-metodo">Efectivo</p>
+            <p class="confirmar-pago-total" id="confirmar-pago-total">$ 0</p>
+            <p class="confirmar-pago-desc" id="confirmar-pago-desc">Confirmá que recibiste el pago.</p>
+        </div>
+        <div class="confirmar-pago-acciones">
+            <button class="btn-primary btn-con-icono" id="btn-confirmar-pago" onclick="confirmarPagoSimple()">
+                <i data-lucide="check-circle"></i>
+                Confirmar pago
+            </button>
+            <button class="btn-outline" onclick="navegarA('vista-metodo-pago')">Cancelar</button>
+        </div>
+    </main>
+
+    <!-- 6. Registrar deuda (Cuenta corriente) -->
+    <main id="vista-registrar-deuda" class="vista">
+        <div class="vista-header">
+            <h2 class="section-title">Cuenta corriente</h2>
+            <p class="vista-desc">Indicá cuánto abona el cliente ahora</p>
+        </div>
+        <div class="deuda-resumen-card">
+            <div class="deuda-fila">
+                <span>Total de la venta:</span>
+                <span id="deuda-total-label" class="monto-destacado">$ 0</span>
+            </div>
+            <div class="input-group">
+                <label>Monto abonado ($)</label>
+                <input type="number" id="deuda-monto-abonado" min="0" value="0"
+                       oninput="actualizarDeudaCalculada()" placeholder="0">
+            </div>
+            <div class="deuda-fila deuda-fila-resultado">
+                <span>Deuda a registrar:</span>
+                <span id="deuda-calculada" class="monto-destacado">$ 0</span>
+            </div>
+        </div>
+        <div class="confirmar-pago-acciones">
+            <button class="btn-primary btn-con-icono" id="btn-confirmar-deuda" onclick="confirmarDeuda()">
+                <i data-lucide="notebook-pen"></i>
+                Registrar deuda
+            </button>
+            <button class="btn-outline" onclick="navegarA('vista-metodo-pago')">Cancelar</button>
+        </div>
+    </main>
+
+    <!-- 7. Pago registrado (Efectivo / Mercado Pago) -->
+    <main id="vista-pago-registrado" class="vista">
+        <div class="exito-logo">
+            <h1 class="logo-text">Moniarquía</h1>
+            <p class="sub-logo">INDUMENTARIA</p>
+            <div class="home-deco">
+                <span class="deco-line"></span>
+                <i data-lucide="heart" class="deco-heart"></i>
+                <span class="deco-line"></span>
+            </div>
+        </div>
+        <div class="exito-card">
+            <div class="exito-icono-verde">
+                <i data-lucide="check" class="exito-check"></i>
+            </div>
+            <h2 class="exito-titulo">¡Pago registrado!</h2>
+            <p class="exito-desc">La venta fue registrada correctamente.</p>
+        </div>
+        <div class="exito-acciones">
+            <button class="btn-primary" onclick="nuevaVenta()">Nueva venta</button>
+            <button class="btn-outline" onclick="navegarA('vista-home')">Ir al inicio</button>
+        </div>
+    </main>
+
+    <!-- 8. Deuda registrada (Cuenta corriente) -->
+    <main id="vista-deuda-registrada" class="vista">
+        <div class="exito-logo">
+            <h1 class="logo-text">Moniarquía</h1>
+            <p class="sub-logo">INDUMENTARIA</p>
+            <div class="home-deco">
+                <span class="deco-line"></span>
+                <i data-lucide="heart" class="deco-heart"></i>
+                <span class="deco-line"></span>
+            </div>
+        </div>
+        <div class="exito-card">
+            <div class="exito-icono-verde">
+                <i data-lucide="check" class="exito-check"></i>
+            </div>
+            <h2 class="exito-titulo">¡Deuda registrada!</h2>
+            <p class="exito-desc">Se registró una deuda de
+                <span id="deuda-registrada-monto" class="exito-monto">$ 0</span>
+                para el cliente.
+            </p>
+        </div>
+        <div class="exito-acciones">
+            <button class="btn-primary" onclick="nuevaVenta()">Nueva venta</button>
+            <button class="btn-outline" onclick="navegarA('vista-home')">Ir al inicio</button>
         </div>
     </main>
 
@@ -403,7 +584,7 @@
                 </button>
             </li>
             <li>
-                <button class="menu-item menu-item-disabled" onclick="mostrarProximamente('Clientes')">
+                <button class="menu-item" onclick="irAClientes()">
                     <i data-lucide="users"></i><span>Clientes</span>
                 </button>
             </li>

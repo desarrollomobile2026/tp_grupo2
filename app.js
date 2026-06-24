@@ -23,6 +23,12 @@ let cantidadSeleccionada = 1;
 let filtroVentaCategoria = 'Todos';
 let terminoVentaBusqueda = '';
 
+// Estado de clientes y ventas (Etapa 4)
+let listClientesGlobal = [];
+let clienteSeleccionado = null;
+let metodoPagoActual = null;
+let origenAgregarCliente = 'venta';
+
 // =====================================================================
 // 2. CONEXIÓN A FIRESTORE (El "Woki-Toki" con Google)
 // =====================================================================
@@ -90,6 +96,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Restaurar carrito de venta desde localStorage
     renderizarCarritoVenta();
+
+    // Suscripción en tiempo real a la colección de clientes (Etapa 4)
+    db.collection('clientes').onSnapshot(snapshot => {
+        listClientesGlobal = [];
+        snapshot.forEach(doc => {
+            listClientesGlobal.push({ id: doc.id, ...doc.data() });
+        });
+        listClientesGlobal.sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
+        renderizarListaClientes('clientes-lista', false);
+        renderizarListaClientes('seleccionar-lista', true);
+    }, err => console.error('Error clientes onSnapshot:', err));
+
+    // Buscadores de clientes
+    document.getElementById('clientes-busqueda')?.addEventListener('input', () => {
+        renderizarListaClientes('clientes-lista', false);
+    });
+    document.getElementById('seleccionar-busqueda')?.addEventListener('input', () => {
+        renderizarListaClientes('seleccionar-lista', true);
+    });
 });
 
 // =====================================================================
@@ -865,7 +890,308 @@ function siguienteDesdeCarrito() {
 
 function irAMetodoPago() {
     renderizarResumenVenta();
+    actualizarSeccionClienteEnPago();
     navegarA('vista-metodo-pago');
+}
+
+// =====================================================================
+// 9. CLIENTES — ETAPA 4
+// =====================================================================
+
+function renderizarListaClientes(contenedorId, modoSeleccion) {
+    const contenedor = document.getElementById(contenedorId);
+    if (!contenedor) return;
+
+    const inputId = modoSeleccion ? 'seleccionar-busqueda' : 'clientes-busqueda';
+    const termino = (document.getElementById(inputId)?.value || '').toLowerCase();
+
+    const filtrados = listClientesGlobal.filter(c =>
+        (c.nombre || '').toLowerCase().includes(termino)
+    );
+
+    if (filtrados.length === 0) {
+        contenedor.innerHTML = '<p class="cargando" style="text-align:center;padding:20px 0;">No hay clientes registrados.</p>';
+        return;
+    }
+
+    const onclick = modoSeleccion
+        ? id => `seleccionarClienteParaVenta('${id}')`
+        : () => `mostrarProximamente('Detalle de cliente')`;
+
+    contenedor.innerHTML = filtrados.map(c => {
+        const inicial = (c.nombre || '?')[0].toUpperCase();
+        return `
+        <div class="cliente-item" onclick="${onclick(c.id)}">
+            <div class="cliente-avatar">${inicial}</div>
+            <div class="cliente-info">
+                <p class="cliente-nombre">${c.nombre || ''}</p>
+                <p class="cliente-dato">${c.telefono || c.email || ''}</p>
+            </div>
+            <i data-lucide="chevron-right" class="cliente-chevron"></i>
+        </div>`;
+    }).join('');
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function irAClientes() {
+    const input = document.getElementById('clientes-busqueda');
+    if (input) input.value = '';
+    renderizarListaClientes('clientes-lista', false);
+    navegarA('vista-clientes');
+    cerrarMenu();
+}
+
+function irASeleccionarCliente() {
+    const input = document.getElementById('seleccionar-busqueda');
+    if (input) input.value = '';
+    renderizarListaClientes('seleccionar-lista', true);
+    navegarA('vista-seleccionar-cliente');
+}
+
+function seleccionarClienteParaVenta(id) {
+    const c = listClientesGlobal.find(cl => cl.id === id);
+    if (!c) return;
+    clienteSeleccionado = c;
+    actualizarSeccionClienteEnPago();
+    irAMetodoPago();
+}
+
+function actualizarSeccionClienteEnPago() {
+    const wrap = document.getElementById('pago-cliente-wrap');
+    if (!wrap) return;
+
+    if (clienteSeleccionado) {
+        const inicial = (clienteSeleccionado.nombre || '?')[0].toUpperCase();
+        wrap.innerHTML = `
+            <div class="cliente-avatar">${inicial}</div>
+            <div class="pago-cliente-info">
+                <p class="pago-cliente-nombre">${clienteSeleccionado.nombre}</p>
+                <p class="pago-cliente-dato">${clienteSeleccionado.telefono || clienteSeleccionado.email || ''}</p>
+            </div>
+            <button class="pago-btn-cambiar" onclick="irASeleccionarCliente()">Cambiar cliente</button>`;
+    } else {
+        wrap.innerHTML = `
+            <div class="pago-cliente-avatar">
+                <i data-lucide="user"></i>
+            </div>
+            <div class="pago-cliente-info">
+                <p class="pago-cliente-nombre">Sin cliente asociado</p>
+                <p class="pago-cliente-dato">Venta anónima</p>
+            </div>
+            <button class="pago-btn-cambiar" onclick="irASeleccionarCliente()">Cambiar cliente</button>`;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+}
+
+function irAAgregarCliente(origen) {
+    origenAgregarCliente = origen || 'venta';
+    const form = document.getElementById('form-agregar-cliente');
+    if (form) form.reset();
+    navegarA('vista-agregar-cliente');
+}
+
+function guardarCliente(e) {
+    e.preventDefault();
+
+    const nombre   = (document.getElementById('cli-nombre')?.value || '').trim();
+    const telefono = (document.getElementById('cli-telefono')?.value || '').trim();
+    const email    = (document.getElementById('cli-email')?.value || '').trim();
+
+    if (!nombre) {
+        alert('El nombre del cliente es obligatorio.');
+        return;
+    }
+
+    const btn = document.getElementById('btn-guardar-cliente');
+    if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
+
+    db.collection('clientes').add({
+        nombre,
+        telefono,
+        email,
+        deudaTotal: 0,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    })
+    .then(docRef => {
+        if (origenAgregarCliente === 'venta') {
+            clienteSeleccionado = { id: docRef.id, nombre, telefono, email, deudaTotal: 0 };
+        }
+        navegarA('vista-cliente-agregado');
+    })
+    .catch(err => alert('Error al guardar cliente: ' + err.message))
+    .finally(() => {
+        if (btn) { btn.disabled = false; btn.textContent = 'Agregar'; }
+    });
+}
+
+function continuarTrasAgregarCliente() {
+    if (origenAgregarCliente === 'venta') {
+        actualizarSeccionClienteEnPago();
+        irAMetodoPago();
+    } else {
+        navegarA('vista-clientes');
+    }
+}
+
+// =====================================================================
+// 10. REGISTRO DE VENTAS Y MÉTODOS DE PAGO — ETAPA 4
+// =====================================================================
+
+function seleccionarMetodoPago(metodo) {
+    metodoPagoActual = metodo;
+
+    if (metodo === 'cuenta_corriente') {
+        if (!clienteSeleccionado) {
+            alert('La cuenta corriente requiere un cliente asociado.\nSeleccioná un cliente primero.');
+            irASeleccionarCliente();
+            return;
+        }
+        const total = carritoVenta.reduce((s, i) => s + (i.precio || 0) * (i.cantidad || 1), 0);
+        const totalLabel = document.getElementById('deuda-total-label');
+        const inputMonto = document.getElementById('deuda-monto-abonado');
+        const deudaEl   = document.getElementById('deuda-calculada');
+        if (totalLabel) totalLabel.textContent = '$ ' + total.toLocaleString('es-AR');
+        if (inputMonto) inputMonto.value = 0;
+        if (deudaEl)    deudaEl.textContent = '$ ' + total.toLocaleString('es-AR');
+        navegarA('vista-registrar-deuda');
+        return;
+    }
+
+    // Efectivo y Mercado Pago
+    const total = carritoVenta.reduce((s, i) => s + (i.precio || 0) * (i.cantidad || 1), 0);
+    const labelEl = document.getElementById('confirmar-pago-metodo');
+    const totalEl = document.getElementById('confirmar-pago-total');
+    const descEl  = document.getElementById('confirmar-pago-desc');
+
+    if (labelEl) labelEl.textContent = metodo === 'efectivo' ? 'Efectivo' : 'Mercado Pago';
+    if (totalEl) totalEl.textContent = '$ ' + total.toLocaleString('es-AR');
+    if (descEl)  descEl.textContent  = metodo === 'efectivo'
+        ? 'Confirmá que recibiste el pago en efectivo.'
+        : 'Confirmá que recibiste el pago por Mercado Pago. El cobro se realizó por fuera de la app.';
+
+    navegarA('vista-confirmar-pago');
+}
+
+function actualizarDeudaCalculada() {
+    const total      = carritoVenta.reduce((s, i) => s + (i.precio || 0) * (i.cantidad || 1), 0);
+    const montoInput = parseFloat(document.getElementById('deuda-monto-abonado')?.value) || 0;
+    const monto      = Math.max(0, Math.min(montoInput, total));
+    const deuda      = total - monto;
+    const el         = document.getElementById('deuda-calculada');
+    if (el) el.textContent = '$ ' + deuda.toLocaleString('es-AR');
+}
+
+function confirmarPagoSimple() {
+    const total = carritoVenta.reduce((s, i) => s + (i.precio || 0) * (i.cantidad || 1), 0);
+    registrarVenta({ metodoPago: metodoPagoActual, montoAbonado: total, deuda: 0, estado: 'completada' });
+}
+
+function confirmarDeuda() {
+    const total   = carritoVenta.reduce((s, i) => s + (i.precio || 0) * (i.cantidad || 1), 0);
+    const monto   = Math.max(0, parseFloat(document.getElementById('deuda-monto-abonado')?.value) || 0);
+    const deuda   = Math.max(0, total - monto);
+
+    if (monto > total) {
+        alert('El monto abonado no puede superar el total de la venta.');
+        return;
+    }
+
+    registrarVenta({ metodoPago: 'cuenta_corriente', montoAbonado: monto, deuda, estado: 'deuda' });
+}
+
+function registrarVenta({ metodoPago, montoAbonado, deuda, estado }) {
+    const total = carritoVenta.reduce((s, i) => s + (i.precio || 0) * (i.cantidad || 1), 0);
+
+    const btnConfirmar = document.getElementById('btn-confirmar-pago');
+    const btnDeuda     = document.getElementById('btn-confirmar-deuda');
+    const btnActivo    = btnConfirmar || btnDeuda;
+    if (btnActivo) { btnActivo.disabled = true; btnActivo.textContent = 'Registrando...'; }
+
+    const ventaData = {
+        clienteId: clienteSeleccionado?.id || null,
+        items: carritoVenta.map(i => ({
+            productoId:     i.id,
+            nombre:         i.nombre,
+            talla:          i.talla  || '',
+            color:          i.color  || '',
+            cantidad:       i.cantidad,
+            precioUnitario: i.precio,
+            subtotal:       i.precio * i.cantidad
+        })),
+        total,
+        metodoPago,
+        estado,
+        montoAbonado,
+        fecha: firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    // Usamos batch para atomicidad: venta + stock + (deuda si aplica)
+    const batch   = db.batch();
+    const ventaRef = db.collection('ventas').doc();
+    batch.set(ventaRef, ventaData);
+
+    // Descontar stock por cada ítem del carrito
+    carritoVenta.forEach(item => {
+        const prodRef = db.collection('productos').doc(item.id);
+        const upd = { stock: firebase.firestore.FieldValue.increment(-item.cantidad) };
+        if (item.talla) {
+            upd[`stockPorTalla.${item.talla}`] = firebase.firestore.FieldValue.increment(-item.cantidad);
+        }
+        batch.update(prodRef, upd);
+    });
+
+    // Cuenta corriente: registrar deuda y actualizar saldo del cliente
+    if (metodoPago === 'cuenta_corriente' && clienteSeleccionado && deuda > 0) {
+        const deudaRef = db.collection('cuentaCorriente').doc();
+        batch.set(deudaRef, {
+            clienteId:   clienteSeleccionado.id,
+            tipo:        'deuda',
+            monto:       deuda,
+            descripcion: 'Venta registrada',
+            ventaId:     ventaRef.id,
+            fecha:       firebase.firestore.FieldValue.serverTimestamp()
+        });
+        const cliRef = db.collection('clientes').doc(clienteSeleccionado.id);
+        batch.update(cliRef, {
+            deudaTotal: firebase.firestore.FieldValue.increment(deuda)
+        });
+    }
+
+    batch.commit()
+        .then(() => {
+            // Limpiar estado post-venta
+            carritoVenta = [];
+            sincronizarCarritoVenta();
+            renderizarCarritoVenta();
+            const montoDeuda = deuda || 0;
+            clienteSeleccionado = null;
+            metodoPagoActual    = null;
+
+            if (metodoPago === 'cuenta_corriente') {
+                const montoEl = document.getElementById('deuda-registrada-monto');
+                if (montoEl) montoEl.textContent = '$ ' + montoDeuda.toLocaleString('es-AR');
+                navegarA('vista-deuda-registrada');
+            } else {
+                navegarA('vista-pago-registrado');
+            }
+        })
+        .catch(err => {
+            alert('Error al registrar la venta: ' + err.message);
+            if (btnActivo) {
+                btnActivo.disabled = false;
+                btnActivo.textContent = metodoPago === 'cuenta_corriente' ? 'Registrar deuda' : 'Confirmar pago';
+            }
+        });
+}
+
+function nuevaVenta() {
+    carritoVenta = [];
+    sincronizarCarritoVenta();
+    renderizarCarritoVenta();
+    clienteSeleccionado = null;
+    metodoPagoActual    = null;
+    iniciarVenta();
 }
 
 function renderizarResumenVenta() {
