@@ -17,12 +17,13 @@
 </head>
 <body>
 
-<div id="app-container">
+<div id="app-container" data-vista="vista-home">
 
     <header class="top-header">
         <button class="btn-nav" id="btn-volver" onclick="volverAtras()">
             <i data-lucide="chevron-left"></i>
         </button>
+        <span class="header-titulo">Inventario</span>
         <button class="btn-nav" id="btn-menu" onclick="abrirMenu()">
             <i data-lucide="menu"></i>
         </button>
@@ -39,7 +40,7 @@
             </div>
         </div>
         <div class="home-cards">
-            <button class="home-card" onclick="navegarA('vista-catalogo')">
+            <button class="home-card" onclick="navegarA('vista-inventario')">
                 <div class="home-card-icono">
                     <i data-lucide="shopping-cart"></i>
                 </div>
@@ -48,7 +49,7 @@
                     <span class="home-card-desc">Escaneá productos para iniciar el carrito</span>
                 </div>
             </button>
-            <button class="home-card" onclick="navegarA('vista-catalogo')">
+            <button class="home-card" onclick="navegarA('vista-inventario')">
                 <div class="home-card-icono">
                     <i data-lucide="package"></i>
                 </div>
@@ -60,13 +61,13 @@
         </div>
     </main>
 
-    <main id="vista-catalogo" class="vista">
-        
+    <main id="vista-inventario" class="vista">
+
+        <!-- CATÁLOGO ANTERIOR — conservado como referencia, sin uso visual activo
         <div class="search-box">
             <span class="search-icon">🔍</span>
             <input type="text" id="input-busqueda" placeholder="Buscar prenda por nombre o código...">
         </div>
-
         <div class="categorias-scroll">
             <button class="chip active" onclick="filtrarCategoria('Todas')">Todas</button>
             <button class="chip" onclick="filtrarCategoria('Camperas')">Camperas</button>
@@ -74,23 +75,51 @@
             <button class="chip" onclick="filtrarCategoria('Pantalones')">Pantalones</button>
             <button class="chip" onclick="filtrarCategoria('Vestidos')">Vestidos</button>
         </div>
-
         <div class="banner-promo">
             <p>⚡ Colección Temporada '26 · Envío gratis superando los $60.000</p>
         </div>
-
         <section class="destacados-section">
             <h2 class="section-title">🔥 Lo más deseado</h2>
-            <div id="contenedor-destacados" class="destacados-grid">
-                </div>
+            <div id="contenedor-destacados" class="destacados-grid"></div>
         </section>
-
         <section class="catalogo-section">
             <h2 class="section-title">👗 Colección de Temporada</h2>
             <div id="contenedor-productos" class="productos-grid">
                 <p class="cargando">Conectando con el inventario de Moniarquía...</p>
             </div>
         </section>
+        FIN CATÁLOGO ANTERIOR -->
+
+        <div class="inv-header">
+            <p class="vista-desc inv-subtitulo">Consultá y gestioná el stock disponible</p>
+            <div class="inv-header-acciones">
+                <button class="btn-escanear" onclick="mostrarProximamente('Escaneo de código de barras')" title="Escanear producto">
+                    <i data-lucide="scan-line"></i>
+                </button>
+                <button class="btn-agregar" onclick="abrirFormProducto(null)" title="Agregar producto">
+                    <i data-lucide="plus"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="search-box">
+            <i data-lucide="search" class="search-lucide-icon"></i>
+            <input type="text" id="inv-busqueda" placeholder="Buscar por nombre o categoría...">
+        </div>
+
+        <div class="categorias-scroll">
+            <button class="chip active" onclick="filtrarInv('Todos')">Todos</button>
+            <button class="chip" onclick="filtrarInv('Camperas')">Camperas</button>
+            <button class="chip" onclick="filtrarInv('Remeras')">Remeras</button>
+            <button class="chip" onclick="filtrarInv('Pantalones')">Pantalones</button>
+            <button class="chip" onclick="filtrarInv('Buzos')">Buzos</button>
+            <button class="chip" onclick="filtrarInv('Shorts')">Shorts</button>
+        </div>
+
+        <div id="inv-lista" class="inv-lista">
+            <p class="cargando">Cargando inventario...</p>
+        </div>
+
     </main>
 
     <main id="vista-carrito" class="vista">
@@ -113,50 +142,109 @@
         </div>
     </main>
 
-    <main id="vista-admin" class="vista">
+    <main id="vista-form-producto" class="vista">
         <div class="vista-header">
-            <h2 class="section-title">➕ Cargar Nueva Prenda</h2>
-            <p class="vista-desc">Agregá stock directamente a la base de datos Firestore</p>
+            <h2 id="form-titulo" class="section-title">Agregar producto</h2>
         </div>
 
-        <form id="form-alta-producto" class="form-moniarquia">
-            
+        <form id="form-inventario-producto" class="form-moniarquia" onsubmit="guardarProducto(event)">
+
             <div class="input-group">
                 <label>Nombre de la prenda</label>
-                <input type="text" id="alta-nombre" placeholder="Ej: Jean Skinny Negro" required>
+                <input type="text" id="inv-nombre" placeholder="Ej: Campera frizada" required>
             </div>
 
             <div class="input-group">
-                <label>Precio de venta ($)</label>
-                <input type="number" id="alta-precio" placeholder="Ej: 22800" required>
+                <label>Precio ($)</label>
+                <input type="number" id="inv-precio" placeholder="Ej: 38000" required min="0">
             </div>
 
             <div class="input-group">
                 <label>Categoría</label>
-                <select id="alta-categoria" required>
+                <select id="inv-categoria" required>
+                    <option value="">Seleccioná una categoría</option>
                     <option value="Camperas">Camperas</option>
                     <option value="Remeras">Remeras</option>
                     <option value="Pantalones">Pantalones</option>
-                    <option value="Vestidos">Vestidos</option>
+                    <option value="Buzos">Buzos</option>
+                    <option value="Shorts">Shorts</option>
                 </select>
             </div>
 
             <div class="input-group">
-                <label>URL de la foto</label>
-                <input type="url" id="alta-foto" placeholder="https://..." required>
+                <label>Color</label>
+                <input type="text" id="inv-color" placeholder="Ej: Verde, Terracota">
             </div>
 
             <div class="input-group">
-                <label>Descripción y detalles</label>
-                <textarea id="alta-desc" placeholder="Tipo de tela, calce, cuidados de lavado..." rows="2" required></textarea>
+                <label>URL de la foto</label>
+                <input type="url" id="inv-foto" placeholder="https://...">
             </div>
 
+            <div class="input-group">
+                <label>Stock por talla</label>
+                <div class="inv-stock-grid">
+                    <div class="inv-stock-item">
+                        <span>S</span>
+                        <input type="number" id="inv-stock-s" min="0" value="0">
+                    </div>
+                    <div class="inv-stock-item">
+                        <span>M</span>
+                        <input type="number" id="inv-stock-m" min="0" value="0">
+                    </div>
+                    <div class="inv-stock-item">
+                        <span>L</span>
+                        <input type="number" id="inv-stock-l" min="0" value="0">
+                    </div>
+                    <div class="inv-stock-item">
+                        <span>XL</span>
+                        <input type="number" id="inv-stock-xl" min="0" value="0">
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-primary btn-submit" id="btn-guardar-producto">Guardar producto</button>
+        </form>
+
+        <!-- FORMULARIO ANTERIOR — conservado como referencia, sin uso visual activo
+        <form id="form-alta-producto" class="form-moniarquia">
+            <div class="input-group"><label>Nombre de la prenda</label>
+                <input type="text" id="alta-nombre" placeholder="Ej: Jean Skinny Negro" required></div>
+            <div class="input-group"><label>Precio de venta ($)</label>
+                <input type="number" id="alta-precio" placeholder="Ej: 22800" required></div>
+            <div class="input-group"><label>Categoría</label>
+                <select id="alta-categoria" required>
+                    <option value="Camperas">Camperas</option><option value="Remeras">Remeras</option>
+                    <option value="Pantalones">Pantalones</option><option value="Vestidos">Vestidos</option>
+                </select></div>
+            <div class="input-group"><label>URL de la foto</label>
+                <input type="url" id="alta-foto" placeholder="https://..." required></div>
+            <div class="input-group"><label>Descripción y detalles</label>
+                <textarea id="alta-desc" placeholder="Tipo de tela, calce, cuidados de lavado..." rows="2" required></textarea></div>
             <button type="submit" class="btn-primary btn-submit">Guardar en Firestore</button>
         </form>
+        FIN FORMULARIO ANTERIOR -->
+
+    </main>
+
+    <main id="vista-confirmar-eliminar" class="vista">
+        <div class="vista-header">
+            <h2 class="section-title">Eliminar producto</h2>
+            <p class="vista-desc">Esta acción no se puede deshacer</p>
+        </div>
+        <div class="confirmar-card">
+            <i data-lucide="trash-2" class="confirmar-icono"></i>
+            <p id="confirmar-nombre-producto" class="confirmar-nombre">¿Eliminar este producto?</p>
+            <p class="confirmar-desc">El producto se eliminará permanentemente del inventario.</p>
+        </div>
+        <div class="confirmar-acciones">
+            <button class="btn-outline" onclick="navegarA('vista-inventario')">Cancelar</button>
+            <button class="btn-danger" onclick="eliminarProducto()">Sí, eliminar</button>
+        </div>
     </main>
 
     <nav class="bottom-nav">
-        <button class="nav-item active" onclick="cambiarVista('vista-catalogo', this)">
+        <button class="nav-item active" onclick="cambiarVista('vista-inventario', this)">
             <span class="icon">🏠</span>
             <span class="text">Inicio</span>
         </button>
@@ -165,7 +253,7 @@
             <span class="text">Carrito</span>
             <span id="badge-carrito" class="badge">0</span>
         </button>
-        <button class="nav-item" onclick="cambiarVista('vista-admin', this)">
+        <button class="nav-item" onclick="cambiarVista('vista-form-producto', this)">
             <span class="icon">➕</span>
             <span class="text">Cargar</span>
         </button>
@@ -183,7 +271,7 @@
                 </button>
             </li>
             <li>
-                <button class="menu-item" onclick="navegarA('vista-catalogo'); cerrarMenu()">
+                <button class="menu-item" onclick="navegarA('vista-inventario'); cerrarMenu()">
                     <i data-lucide="package"></i><span>Inventario</span>
                 </button>
             </li>
