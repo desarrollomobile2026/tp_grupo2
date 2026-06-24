@@ -11,6 +11,7 @@
     
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
 
     <link rel="stylesheet" href="style.css">
 </head>
@@ -19,11 +20,47 @@
 <div id="app-container">
 
     <header class="top-header">
-        <h1 class="logo-text">Moniarquía</h1>
-        <p class="sub-logo">INDUMENTARIA</p>
+        <button class="btn-nav" id="btn-volver" onclick="volverAtras()">
+            <i data-lucide="chevron-left"></i>
+        </button>
+        <button class="btn-nav" id="btn-menu" onclick="abrirMenu()">
+            <i data-lucide="menu"></i>
+        </button>
     </header>
 
-    <main id="vista-catalogo" class="vista active">
+    <main id="vista-home" class="vista active">
+        <div class="home-logo">
+            <h1 class="logo-text">Moniarquía</h1>
+            <p class="sub-logo">INDUMENTARIA</p>
+            <div class="home-deco">
+                <span class="deco-line"></span>
+                <i data-lucide="heart" class="deco-heart"></i>
+                <span class="deco-line"></span>
+            </div>
+        </div>
+        <div class="home-cards">
+            <button class="home-card" onclick="navegarA('vista-catalogo')">
+                <div class="home-card-icono">
+                    <i data-lucide="shopping-cart"></i>
+                </div>
+                <div class="home-card-texto">
+                    <span class="home-card-titulo">Iniciar venta</span>
+                    <span class="home-card-desc">Escaneá productos para iniciar el carrito</span>
+                </div>
+            </button>
+            <button class="home-card" onclick="navegarA('vista-catalogo')">
+                <div class="home-card-icono">
+                    <i data-lucide="package"></i>
+                </div>
+                <div class="home-card-texto">
+                    <span class="home-card-titulo">Consultar stock</span>
+                    <span class="home-card-desc">Revisá la disponibilidad de los productos</span>
+                </div>
+            </button>
+        </div>
+    </main>
+
+    <main id="vista-catalogo" class="vista">
         
         <div class="search-box">
             <span class="search-icon">🔍</span>
@@ -132,6 +169,45 @@
             <span class="icon">➕</span>
             <span class="text">Cargar</span>
         </button>
+    </nav>
+
+    <div id="menu-overlay" class="menu-overlay" onclick="cerrarMenu()"></div>
+    <nav id="menu-lateral" class="menu-lateral">
+        <div class="menu-header">
+            <span class="logo-text menu-logo-text">Moniarquía</span>
+        </div>
+        <ul class="menu-lista">
+            <li>
+                <button class="menu-item" onclick="navegarA('vista-home'); cerrarMenu()">
+                    <i data-lucide="home"></i><span>Inicio</span>
+                </button>
+            </li>
+            <li>
+                <button class="menu-item" onclick="navegarA('vista-catalogo'); cerrarMenu()">
+                    <i data-lucide="package"></i><span>Inventario</span>
+                </button>
+            </li>
+            <li>
+                <button class="menu-item menu-item-disabled" onclick="mostrarProximamente('Clientes')">
+                    <i data-lucide="users"></i><span>Clientes</span>
+                </button>
+            </li>
+            <li>
+                <button class="menu-item menu-item-disabled" onclick="mostrarProximamente('Cambios y devoluciones')">
+                    <i data-lucide="archive-restore"></i><span>Cambios/devol.</span>
+                </button>
+            </li>
+            <li>
+                <button class="menu-item menu-item-disabled" onclick="mostrarProximamente('Configuración')">
+                    <i data-lucide="settings"></i><span>Configuración</span>
+                </button>
+            </li>
+        </ul>
+        <div class="menu-footer">
+            <button class="menu-item menu-item-cerrar" onclick="mostrarProximamente('Cerrar sesión')">
+                <i data-lucide="log-out"></i><span>Cerrar sesión</span>
+            </button>
+        </div>
     </nav>
 
 </div>
