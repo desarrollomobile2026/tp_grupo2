@@ -23,7 +23,8 @@
         <button class="btn-nav" id="btn-volver" onclick="volverAtras()">
             <i data-lucide="chevron-left"></i>
         </button>
-        <span class="header-titulo">Inventario</span>
+        <span class="header-titulo header-titulo--inventario">Inventario</span>
+        <span class="header-titulo header-titulo--carrito">Carrito</span>
         <button class="btn-nav" id="btn-menu" onclick="abrirMenu()">
             <i data-lucide="menu"></i>
         </button>
@@ -40,7 +41,7 @@
             </div>
         </div>
         <div class="home-cards">
-            <button class="home-card" onclick="navegarA('vista-inventario')">
+            <button class="home-card" onclick="iniciarVenta()">
                 <div class="home-card-icono">
                     <i data-lucide="shopping-cart"></i>
                 </div>
@@ -183,23 +184,8 @@
 
             <div class="input-group">
                 <label>Stock por talla</label>
-                <div class="inv-stock-grid">
-                    <div class="inv-stock-item">
-                        <span>S</span>
-                        <input type="number" id="inv-stock-s" min="0" value="0">
-                    </div>
-                    <div class="inv-stock-item">
-                        <span>M</span>
-                        <input type="number" id="inv-stock-m" min="0" value="0">
-                    </div>
-                    <div class="inv-stock-item">
-                        <span>L</span>
-                        <input type="number" id="inv-stock-l" min="0" value="0">
-                    </div>
-                    <div class="inv-stock-item">
-                        <span>XL</span>
-                        <input type="number" id="inv-stock-xl" min="0" value="0">
-                    </div>
+                <div id="inv-stock-grid" class="inv-stock-grid">
+                    <!-- Contenido generado dinámicamente por renderizarStockGrid() según categoría -->
                 </div>
             </div>
 
@@ -240,6 +226,147 @@
         <div class="confirmar-acciones">
             <button class="btn-outline" onclick="navegarA('vista-inventario')">Cancelar</button>
             <button class="btn-danger" onclick="eliminarProducto()">Sí, eliminar</button>
+        </div>
+    </main>
+
+    <!-- ============================================================
+         ETAPA 3: FLUJO DE VENTA
+         ============================================================ -->
+
+    <!-- 1. Selección de producto (modo venta) -->
+    <main id="vista-seleccionar-producto" class="vista">
+        <div class="inv-header">
+            <p class="vista-desc inv-subtitulo">Seleccioná el producto para la venta</p>
+        </div>
+        <div class="search-box">
+            <i data-lucide="search" class="search-lucide-icon"></i>
+            <input type="text" id="venta-busqueda" placeholder="Buscar producto...">
+        </div>
+        <div class="categorias-scroll">
+            <button class="chip active" onclick="filtrarVenta('Todos')">Todos</button>
+            <button class="chip" onclick="filtrarVenta('Camperas')">Camperas</button>
+            <button class="chip" onclick="filtrarVenta('Remeras')">Remeras</button>
+            <button class="chip" onclick="filtrarVenta('Pantalones')">Pantalones</button>
+            <button class="chip" onclick="filtrarVenta('Buzos')">Buzos</button>
+            <button class="chip" onclick="filtrarVenta('Shorts')">Shorts</button>
+        </div>
+        <div id="venta-lista" class="venta-lista">
+            <p class="cargando">Cargando productos...</p>
+        </div>
+    </main>
+
+    <!-- 2. Card de producto (detalle + selectores) -->
+    <main id="vista-producto" class="vista">
+        <div class="producto-logo">
+            <h1 class="logo-text">Moniarquía</h1>
+            <p class="sub-logo">INDUMENTARIA</p>
+            <div class="home-deco">
+                <span class="deco-line"></span>
+                <i data-lucide="heart" class="deco-heart"></i>
+                <span class="deco-line"></span>
+            </div>
+        </div>
+        <div id="producto-contenido" class="producto-contenido">
+            <!-- Renderizado dinámicamente por abrirProducto() -->
+        </div>
+    </main>
+
+    <!-- 3. Carrito de venta -->
+    <main id="vista-carrito-venta" class="vista">
+        <div class="carrito-venta-header">
+            <div class="carrito-venta-icono-wrap">
+                <i data-lucide="shopping-cart"></i>
+            </div>
+            <p class="vista-desc">Gestioná tu carrito</p>
+        </div>
+        <div id="carrito-venta-lista" class="carrito-venta-lista">
+            <!-- Renderizado por renderizarCarritoVenta() -->
+        </div>
+        <div class="carrito-venta-resumen">
+            <div class="total-row">
+                <span>Total a pagar:</span>
+                <span id="carrito-venta-total" class="monto-destacado">$ 0</span>
+            </div>
+        </div>
+        <div class="carrito-venta-acciones">
+            <button class="btn-primary btn-con-icono" onclick="siguienteDesdeCarrito()">
+                <i data-lucide="circle-arrow-right"></i>
+                Siguiente
+            </button>
+            <button class="btn-secondary-outline" onclick="navegarA('vista-seleccionar-producto')">
+                <i data-lucide="scan-line"></i>
+                Escanear otro
+            </button>
+        </div>
+    </main>
+
+    <!-- 4. ¿Desea asociar cliente? -->
+    <main id="vista-asociar-cliente" class="vista">
+        <div class="asociar-logo">
+            <h1 class="logo-text">Moniarquía</h1>
+            <p class="sub-logo">INDUMENTARIA</p>
+            <div class="home-deco">
+                <span class="deco-line"></span>
+                <i data-lucide="heart" class="deco-heart"></i>
+                <span class="deco-line"></span>
+            </div>
+        </div>
+        <div class="asociar-card">
+            <i data-lucide="user-round" class="asociar-icono"></i>
+            <p class="asociar-pregunta">¿Desea asociar un cliente a esta compra?</p>
+            <p class="asociar-desc">Podrás buscar un cliente o registrar uno nuevo.</p>
+        </div>
+        <div class="asociar-botones">
+            <button class="btn-primary asociar-btn-si" onclick="mostrarProximamente('Asociar cliente')">Sí</button>
+            <button class="btn-outline asociar-btn-no" onclick="irAMetodoPago()">No</button>
+        </div>
+    </main>
+
+    <!-- 5. Método de pago (visual, sin registro en Etapa 3) -->
+    <main id="vista-metodo-pago" class="vista">
+        <h2 class="section-title">Elegí la forma de pago</h2>
+        <p class="vista-desc">Seleccioná cómo querés cobrar esta venta</p>
+
+        <div class="pago-cliente-wrap">
+            <div class="pago-cliente-avatar">
+                <i data-lucide="user"></i>
+            </div>
+            <div class="pago-cliente-info">
+                <p class="pago-cliente-nombre">Sin cliente asociado</p>
+                <p class="pago-cliente-dato">Venta anónima</p>
+            </div>
+            <button class="pago-btn-cambiar" onclick="mostrarProximamente('Cambiar cliente')">
+                Cambiar cliente
+            </button>
+        </div>
+
+        <div class="pago-resumen">
+            <p class="pago-resumen-titulo">Resumen de la venta</p>
+            <div id="pago-resumen-items">
+                <!-- Renderizado por renderizarResumenVenta() -->
+            </div>
+            <div class="total-row pago-total-row">
+                <span>Total a pagar:</span>
+                <span id="pago-total" class="monto-destacado">$ 0</span>
+            </div>
+        </div>
+
+        <div class="pago-metodos">
+            <button class="pago-metodo-item" onclick="mostrarProximamente('Efectivo')">
+                <i data-lucide="banknote"></i>
+                <span>Efectivo</span>
+                <i data-lucide="chevron-right" class="pago-chevron"></i>
+            </button>
+            <button class="pago-metodo-item" onclick="mostrarProximamente('Mercado Pago')">
+                <i data-lucide="credit-card"></i>
+                <span>Mercado Pago</span>
+                <i data-lucide="chevron-right" class="pago-chevron"></i>
+            </button>
+            <button class="pago-metodo-item" onclick="mostrarProximamente('Cuenta corriente')">
+                <i data-lucide="notebook-pen"></i>
+                <span>Cuenta corriente</span>
+                <i data-lucide="chevron-right" class="pago-chevron"></i>
+            </button>
         </div>
     </main>
 
