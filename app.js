@@ -12,6 +12,10 @@ let terminoBuscado = "";
 // 2. CONEXIÓN A FIRESTORE (El "Woki-Toki" con Google)
 // =====================================================================
 document.addEventListener('DOMContentLoaded', () => {
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    const btnVolver = document.getElementById('btn-volver');
+    if (btnVolver) btnVolver.style.visibility = 'hidden';
+
     actualizarBadgeCarrito();
     renderizarCarrito();
 
@@ -232,4 +236,40 @@ function filtrarCategoria(cat) {
     document.querySelectorAll('.categorias-scroll .chip').forEach(c => c.classList.remove('active'));
     event.target.classList.add('active');
     renderizarCatalogo();
+}
+
+// =====================================================================
+// 6. NAVEGACIÓN Y MENÚ HAMBURGUESA (Etapa 1)
+// =====================================================================
+
+function navegarA(vistaId) {
+    document.querySelectorAll('.vista').forEach(v => v.classList.remove('active'));
+    const destino = document.getElementById(vistaId);
+    if (destino) {
+        destino.classList.add('active');
+        destino.scrollTop = 0;
+    }
+    const btnVolver = document.getElementById('btn-volver');
+    if (btnVolver) {
+        btnVolver.style.visibility = (vistaId === 'vista-home') ? 'hidden' : 'visible';
+    }
+}
+
+function volverAtras() {
+    navegarA('vista-home');
+}
+
+function abrirMenu() {
+    document.getElementById('menu-lateral')?.classList.add('activo');
+    document.getElementById('menu-overlay')?.classList.add('activo');
+}
+
+function cerrarMenu() {
+    document.getElementById('menu-lateral')?.classList.remove('activo');
+    document.getElementById('menu-overlay')?.classList.remove('activo');
+}
+
+function mostrarProximamente(seccion) {
+    cerrarMenu();
+    alert(`"${seccion}" estará disponible próximamente.`);
 }

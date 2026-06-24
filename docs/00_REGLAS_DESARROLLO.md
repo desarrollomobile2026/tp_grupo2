@@ -30,15 +30,14 @@ Consultar siempre antes de modificar código:
 
 ## 3. Rama de trabajo
 
-Todo el desarrollo se realiza únicamente sobre la rama:
+Todo el desarrollo se realizará sobre la rama:
 
-```
-oscar
-```
+`oscar`
 
+Reglas:
 - No crear nuevas ramas.
 - No modificar `main`.
-- Verificar rama activa antes de cualquier cambio con `git branch`.
+- Todo cambio debe realizarse y probarse en `oscar`.
 
 ---
 
