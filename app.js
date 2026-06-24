@@ -1553,3 +1553,301 @@ function renderizarResumenVenta() {
     const total = carritoVenta.reduce((s, i) => s + (i.precio || 0) * (i.cantidad || 1), 0);
     if (totalEl) totalEl.textContent = '$ ' + total.toLocaleString('es-AR');
 }
+
+// =====================================================================
+// 12. CAMBIOS Y DEVOLUCIONES — ETAPA 7
+// =====================================================================
+
+let ventasCambiosGlobal   = [];
+let ventaSeleccionada     = null;
+let itemCambio            = null;
+let talleCambioNuevo      = null;
+let mostrarTodasVentas    = false;
+let terminoBusquedaCambio = '';
+
+function irACambios() {
+    ventaSeleccionada      = null;
+    itemCambio             = null;
+    talleCambioNuevo       = null;
+    mostrarTodasVentas     = false;
+    terminoBusquedaCambio  = '';
+    const input = document.getElementById('cambios-busqueda');
+    if (input) input.value = '';
+    navegarA('vista-cambios');
+    cerrarMenu();
+    cargarVentasParaCambios();
+}
+
+function cargarVentasParaCambios() {
+    const lista = document.getElementById('cambios-ventas-lista');
+    if (lista) lista.innerHTML = '<p class="cargando" style="text-align:center;padding:12px 0;">Cargando ventas recientes...</p>';
+
+    db.collection('ventas').get()
+        .then(snapshot => {
+            ventasCambiosGlobal = snapshot.docs
+                .map(doc => ({ id: doc.id, ...doc.data() }))
+                .sort((a, b) => {
+                    const fa = a.fecha?.toDate?.() || new Date(0);
+                    const fb = b.fecha?.toDate?.() || new Date(0);
+                    return fb - fa;
+                });
+            renderizarVentasCambio();
+        })
+        .catch(err => {
+            const lista = document.getElementById('cambios-ventas-lista');
+            if (lista) lista.innerHTML = '<p class="cargando" style="text-align:center;">Error al cargar ventas.</p>';
+            console.error('Error cargando ventas para cambios:', err);
+        });
+}
+
+function buscarVentaCambio() {
+    const input = document.getElementById('cambios-busqueda');
+    terminoBusquedaCambio = (input?.value || '').toLowerCase().trim();
+    mostrarTodasVentas    = false;
+    renderizarVentasCambio();
+}
+
+function verTodasLasVentas() {
+    mostrarTodasVentas = true;
+    renderizarVentasCambio();
+}
+
+function renderizarVentasCambio() {
+    const lista = document.getElementById('cambios-ventas-lista');
+    if (!lista) return;
+
+    const termino = terminoBusquedaCambio;
+    let filtradas = ventasCambiosGlobal;
+
+    if (termino) {
+        filtradas = ventasCambiosGlobal.filter(v => {
+            const cliente = listClientesGlobal.find(c => c.id === v.clienteId);
+            const nombre  = (cliente?.nombre || '').toLowerCase();
+            const ticket  = v.id.slice(-6).toLowerCase();
+            return nombre.includes(termino) || ticket.includes(termino);
+        });
+    }
+
+    const mostrar = (mostrarTodasVentas || termino) ? filtradas : filtradas.slice(0, 5);
+
+    if (mostrar.length === 0) {
+        lista.innerHTML = '<p class="cargando" style="text-align:center;padding:12px 0;">No se encontraron ventas.</p>';
+        return;
+    }
+
+    lista.innerHTML = mostrar.map(v => {
+        const cliente  = listClientesGlobal.find(c => c.id === v.clienteId);
+        const nombre   = cliente?.nombre || 'Venta anónima';
+        const inicial  = nombre[0].toUpperCase();
+        const ticket   = '#' + v.id.slice(-6).toUpperCase();
+        const fecha    = v.fecha?.toDate?.()
+            ? v.fecha.toDate().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' })
+            : '—';
+        return `
+        <div class="cliente-item" onclick="seleccionarVentaParaCambio('${v.id}')">
+            <div class="cliente-avatar">${inicial}</div>
+            <div class="cliente-info">
+                <p class="cliente-nombre">${nombre}</p>
+                <p class="cliente-dato">${ticket} — ${fecha}</p>
+            </div>
+            <p class="cambio-venta-monto">$ ${(v.total || 0).toLocaleString('es-AR')}</p>
+            <i data-lucide="chevron-right" class="cliente-chevron"></i>
+        </div>`;
+    }).join('');
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function seleccionarVentaParaCambio(id) {
+    const venta = ventasCambiosGlobal.find(v => v.id === id);
+    if (!venta) return;
+    ventaSeleccionada = venta;
+    renderizarItemsVentaCambio();
+    navegarA('vista-items-venta');
+}
+
+function renderizarItemsVentaCambio() {
+    const lista = document.getElementById('items-venta-lista');
+    if (!lista || !ventaSeleccionada) return;
+
+    const items = ventaSeleccionada.items || [];
+    if (items.length === 0) {
+        lista.innerHTML = '<p class="cargando" style="text-align:center;padding:24px 0;">Esta venta no tiene productos registrados.</p>';
+        return;
+    }
+
+    lista.innerHTML = items.map((item, idx) => {
+        const tieneTalle  = !!(item.talla && item.talla.trim());
+        const clsDis      = !tieneTalle ? 'cambio-item-disabled' : '';
+        const onclick     = tieneTalle ? `onclick="seleccionarItemParaCambio(${idx})"` : '';
+        const metaLinea   = [
+            item.talla  ? `Talle: ${item.talla}` : '',
+            item.color  ? `Color: ${item.color}` : ''
+        ].filter(Boolean).join(' · ');
+        return `
+        <div class="cambio-item ${clsDis}" ${onclick}>
+            <div class="cambio-item-info">
+                <p class="cambio-item-nombre">${item.nombre || '—'}</p>
+                ${metaLinea ? `<p class="cambio-item-meta">${metaLinea}</p>` : ''}
+                ${!tieneTalle ? '<p class="cambio-item-nota">Sin talle registrado — no disponible para cambio</p>' : ''}
+            </div>
+            ${tieneTalle ? '<i data-lucide="chevron-right" class="cliente-chevron"></i>' : ''}
+        </div>`;
+    }).join('');
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function seleccionarItemParaCambio(idx) {
+    const item = ventaSeleccionada?.items?.[idx];
+    if (!item || !item.talla) return;
+
+    itemCambio        = { ...item };
+    talleCambioNuevo  = null;
+
+    const nombreEl   = document.getElementById('talle-cambio-producto-nombre');
+    const actualEl   = document.getElementById('talle-cambio-actual');
+    const contenedor = document.getElementById('talle-cambio-contenido');
+
+    if (nombreEl)   nombreEl.textContent   = item.nombre || '—';
+    if (actualEl)   actualEl.textContent   = item.talla;
+    if (contenedor) contenedor.innerHTML   = '<p class="cargando" style="text-align:center;padding:16px 0;">Cargando talles disponibles...</p>';
+
+    navegarA('vista-seleccionar-talle');
+
+    db.collection('productos').doc(item.productoId).get()
+        .then(doc => {
+            if (!doc.exists) {
+                if (contenedor) contenedor.innerHTML = '<p class="cargando" style="text-align:center;">Producto no encontrado en el inventario.</p>';
+                return;
+            }
+            const stockPorTalla = doc.data().stockPorTalla;
+            if (!stockPorTalla) {
+                if (contenedor) contenedor.innerHTML = '<p class="cargando" style="text-align:center;">Este producto no tiene stock por talle registrado.</p>';
+                return;
+            }
+
+            const disponibles = Object.entries(stockPorTalla)
+                .filter(([t, stock]) => stock > 0 && t !== item.talla)
+                .map(([t, stock]) => ({ talle: t, stock }));
+
+            if (disponibles.length === 0) {
+                if (contenedor) contenedor.innerHTML = '<p class="cargando" style="text-align:center;">No hay otros talles disponibles en stock para este producto.</p>';
+                return;
+            }
+
+            if (contenedor) {
+                contenedor.innerHTML = `
+                    <p style="font-size:13px;color:var(--gris);margin-bottom:10px;">Seleccioná el nuevo talle:</p>
+                    <div class="producto-talles">
+                        ${disponibles.map(({ talle, stock }) => `
+                            <button class="producto-talle-chip"
+                                    onclick="seleccionarTalleNuevo('${talle}')">
+                                ${talle}
+                            </button>`).join('')}
+                    </div>`;
+            }
+        })
+        .catch(err => {
+            if (contenedor) contenedor.innerHTML = '<p class="cargando" style="text-align:center;">Error al cargar los talles.</p>';
+            console.error('Error talles cambio:', err);
+        });
+}
+
+function seleccionarTalleNuevo(talle) {
+    talleCambioNuevo = talle;
+
+    document.querySelectorAll('#talle-cambio-contenido .producto-talle-chip')
+        .forEach(c => c.classList.toggle('activo', c.textContent.trim() === talle));
+
+    renderizarConfirmarCambio();
+    navegarA('vista-confirmar-cambio');
+}
+
+function renderizarConfirmarCambio() {
+    const productoEl = document.getElementById('confirmar-cambio-producto');
+    const desdeEl    = document.getElementById('confirmar-cambio-desde');
+    const haciaEl    = document.getElementById('confirmar-cambio-hacia');
+    const clienteEl  = document.getElementById('confirmar-cambio-cliente');
+
+    if (productoEl) productoEl.textContent = itemCambio?.nombre     || '—';
+    if (desdeEl)    desdeEl.textContent    = itemCambio?.talla      || '—';
+    if (haciaEl)    haciaEl.textContent    = talleCambioNuevo       || '—';
+
+    const cliente = listClientesGlobal.find(c => c.id === ventaSeleccionada?.clienteId);
+    if (clienteEl) clienteEl.textContent   = cliente?.nombre || 'Venta anónima';
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function ejecutarCambio() {
+    // Validaciones previas
+    if (!itemCambio?.talla || !talleCambioNuevo || !itemCambio?.productoId) {
+        alert('Datos incompletos para realizar el cambio.');
+        return;
+    }
+    if (talleCambioNuevo === itemCambio.talla) {
+        alert('El talle nuevo debe ser diferente al talle actual.');
+        return;
+    }
+
+    const btn = document.getElementById('btn-confirmar-cambio');
+    if (btn) { btn.disabled = true; btn.textContent = 'Procesando...'; }
+
+    // Re-verificar stock antes del commit (evita race conditions)
+    db.collection('productos').doc(itemCambio.productoId).get()
+        .then(doc => {
+            if (!doc.exists) throw new Error('Producto no encontrado en el inventario.');
+
+            const stockPorTalla = doc.data().stockPorTalla;
+            if (!stockPorTalla) throw new Error('El producto no tiene stock por talle registrado.');
+
+            const stockNuevo = stockPorTalla[talleCambioNuevo] ?? 0;
+            if (stockNuevo <= 0) throw new Error(`El talle ${talleCambioNuevo} ya no tiene stock disponible.`);
+
+            const batch   = db.batch();
+            const prodRef = db.collection('productos').doc(itemCambio.productoId);
+
+            // Sumar 1 al talle devuelto, restar 1 al talle nuevo
+            batch.update(prodRef, {
+                [`stockPorTalla.${itemCambio.talla}`]:  firebase.firestore.FieldValue.increment(1),
+                [`stockPorTalla.${talleCambioNuevo}`]:  firebase.firestore.FieldValue.increment(-1)
+            });
+
+            // Registrar el cambio en /cambios
+            const cambioRef = db.collection('cambios').doc();
+            batch.set(cambioRef, {
+                ventaId:        ventaSeleccionada.id,
+                productoId:     itemCambio.productoId,
+                nombreProducto: itemCambio.nombre   || '',
+                talleDevuelto:  itemCambio.talla,
+                talleNuevo:     talleCambioNuevo,
+                clienteId:      ventaSeleccionada.clienteId || null,
+                fecha:          firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            return batch.commit();
+        })
+        .then(() => {
+            navegarA('vista-cambio-realizado', { silencioso: true });
+        })
+        .catch(err => {
+            alert(err.message || 'Error al registrar el cambio.');
+        })
+        .finally(() => {
+            if (btn) { btn.disabled = false; btn.textContent = 'Confirmar cambio'; }
+        });
+}
+
+function reiniciarCambios() {
+    ventaSeleccionada     = null;
+    itemCambio            = null;
+    talleCambioNuevo      = null;
+    mostrarTodasVentas    = false;
+    terminoBusquedaCambio = '';
+    historialNavegacion   = [];
+    const input = document.getElementById('cambios-busqueda');
+    if (input) input.value = '';
+    navegarA('vista-cambios', { silencioso: true });
+    cargarVentasParaCambios();
+}
