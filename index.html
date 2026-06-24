@@ -29,6 +29,7 @@
         <span class="header-titulo header-titulo--seleccionar-cliente">Asociar a cliente</span>
         <span class="header-titulo header-titulo--metodo-pago">Método de pago</span>
         <span class="header-titulo header-titulo--confirmar-pago">Confirmar pago</span>
+        <span class="header-titulo header-titulo--cambios">Cambio o devolución</span>
         <button class="btn-nav" id="btn-menu" onclick="abrirMenu()">
             <i data-lucide="menu"></i>
         </button>
@@ -650,6 +651,120 @@
         </div>
     </main>
 
+    <!-- ============================================================
+         ETAPA 7: CAMBIOS Y DEVOLUCIONES
+         ============================================================ -->
+
+    <!-- 1. Pantalla de entrada -->
+    <main id="vista-cambios" class="vista">
+        <div class="cambios-entrada">
+            <div class="cambios-icono-wrap">
+                <i data-lucide="archive-restore" class="cambios-icono"></i>
+            </div>
+            <p class="cambios-desc">Buscá la venta para ver los productos que el cliente quiere cambiar de talle.</p>
+        </div>
+
+        <div class="cambios-card">
+            <h3 class="cambios-card-titulo">Buscá la venta</h3>
+            <p class="cambios-card-desc">Ingresá el número de ticket o el nombre del cliente para encontrarla.</p>
+            <div class="search-box" style="margin-top:12px;">
+                <i data-lucide="search" class="search-lucide-icon"></i>
+                <input type="text" id="cambios-busqueda"
+                       placeholder="Buscar por número de ticket o nombre..."
+                       oninput="buscarVentaCambio()">
+            </div>
+        </div>
+
+        <div class="cambios-card">
+            <h3 class="cambios-card-titulo">Ventas recientes</h3>
+            <p class="cambios-card-desc">Seleccioná una venta reciente para continuar más rápido.</p>
+            <div id="cambios-ventas-lista" class="clientes-lista" style="margin-top:12px;">
+                <p class="cargando" style="text-align:center;padding:12px 0;">Cargando ventas recientes...</p>
+            </div>
+            <button class="cambios-ver-todas-btn" onclick="verTodasLasVentas()">Ver todas las ventas</button>
+        </div>
+    </main>
+
+    <!-- 2. Seleccionar producto de la venta -->
+    <main id="vista-items-venta" class="vista">
+        <div class="vista-header">
+            <h2 class="section-title">Seleccionar producto</h2>
+            <p class="vista-desc">Elegí el producto que el cliente quiere cambiar de talle</p>
+        </div>
+        <div id="items-venta-lista" class="historial-lista">
+            <!-- Renderizado dinámicamente -->
+        </div>
+    </main>
+
+    <!-- 3. Seleccionar nuevo talle -->
+    <main id="vista-seleccionar-talle" class="vista">
+        <div class="vista-header">
+            <h2 class="section-title">Nuevo talle</h2>
+            <p class="vista-desc">Seleccioná el talle disponible para el cambio</p>
+        </div>
+        <div class="cambio-producto-card">
+            <p class="cambio-producto-nombre" id="talle-cambio-producto-nombre">-</p>
+            <p class="cambio-talle-actual">Talle actual: <strong id="talle-cambio-actual">-</strong></p>
+        </div>
+        <div id="talle-cambio-contenido" class="talle-cambio-chips-wrap">
+            <!-- Renderizado dinámicamente -->
+        </div>
+    </main>
+
+    <!-- 4. Confirmar cambio -->
+    <main id="vista-confirmar-cambio" class="vista">
+        <div class="vista-header">
+            <h2 class="section-title">Confirmar cambio</h2>
+        </div>
+        <div class="confirmar-cambio-card">
+            <p class="confirmar-cambio-producto" id="confirmar-cambio-producto">-</p>
+            <div class="confirmar-cambio-talles">
+                <div class="confirmar-talle-bloque">
+                    <p class="confirmar-talle-label">Talle devuelto</p>
+                    <p class="confirmar-talle-valor" id="confirmar-cambio-desde">-</p>
+                </div>
+                <i data-lucide="arrow-right" class="confirmar-talle-flecha"></i>
+                <div class="confirmar-talle-bloque">
+                    <p class="confirmar-talle-label">Talle nuevo</p>
+                    <p class="confirmar-talle-valor confirmar-talle-nuevo" id="confirmar-cambio-hacia">-</p>
+                </div>
+            </div>
+            <p class="confirmar-cambio-meta">Cliente: <strong id="confirmar-cambio-cliente">—</strong></p>
+            <p class="confirmar-cambio-meta">Diferencia de precio: <strong>$ 0</strong></p>
+        </div>
+        <div class="confirmar-pago-acciones">
+            <button class="btn-primary btn-con-icono" id="btn-confirmar-cambio" onclick="ejecutarCambio()">
+                <i data-lucide="check-circle"></i>
+                Confirmar cambio
+            </button>
+            <button class="btn-outline" onclick="volverAtras()">Cancelar</button>
+        </div>
+    </main>
+
+    <!-- 5. Cambio realizado -->
+    <main id="vista-cambio-realizado" class="vista">
+        <div class="exito-logo">
+            <h1 class="logo-text">Moniarquía</h1>
+            <p class="sub-logo">INDUMENTARIA</p>
+            <div class="home-deco">
+                <span class="deco-line"></span>
+                <i data-lucide="heart" class="deco-heart"></i>
+                <span class="deco-line"></span>
+            </div>
+        </div>
+        <div class="exito-card">
+            <div class="exito-icono-verde">
+                <i data-lucide="check" class="exito-check"></i>
+            </div>
+            <h2 class="exito-titulo">¡Cambio realizado!</h2>
+            <p class="exito-desc">El stock fue actualizado correctamente.</p>
+        </div>
+        <div class="exito-acciones">
+            <button class="btn-primary" onclick="reiniciarCambios()">Nuevo cambio</button>
+            <button class="btn-outline" onclick="irAlInicio()">Ir al inicio</button>
+        </div>
+    </main>
+
     <nav class="bottom-nav">
         <button class="nav-item active" onclick="cambiarVista('vista-inventario', this)">
             <span class="icon">🏠</span>
@@ -688,7 +803,7 @@
                 </button>
             </li>
             <li>
-                <button class="menu-item menu-item-disabled" onclick="mostrarProximamente('Cambios y devoluciones')">
+                <button class="menu-item" onclick="irACambios()">
                     <i data-lucide="archive-restore"></i><span>Cambios/devol.</span>
                 </button>
             </li>
