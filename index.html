@@ -64,6 +64,7 @@
         <span class="header-titulo header-titulo--mi-perfil">Mi perfil</span>
         <span class="header-titulo header-titulo--editar-perfil">Editar perfil</span>
         <span class="header-titulo header-titulo--cambiar-password">Cambiar contraseña</span>
+        <span class="header-titulo header-titulo--gestionar-stock">Gestionar stock</span>
         <button class="btn-nav" id="btn-menu" onclick="abrirMenu()">
             <i data-lucide="menu"></i>
         </button>
@@ -345,10 +346,10 @@
         <div class="inv-header">
             <p class="vista-desc inv-subtitulo">Consultá y gestioná el stock disponible</p>
             <div class="inv-header-acciones">
-                <button class="btn-escanear" onclick="abrirEscaneo()" title="Escanear producto">
+                <button class="btn-escanear solo-admin" onclick="abrirEscaneo()" title="Escanear producto">
                     <i data-lucide="scan-line"></i>
                 </button>
-                <button class="btn-agregar" onclick="abrirFormProducto(null)" title="Agregar producto">
+                <button class="btn-agregar solo-admin" onclick="abrirFormProducto(null)" title="Agregar producto">
                     <i data-lucide="plus"></i>
                 </button>
             </div>
@@ -421,7 +422,17 @@
 
             <div class="input-group">
                 <label>Color</label>
-                <input type="text" id="inv-color" placeholder="Ej: Verde, Terracota">
+                <div class="color-selector" id="color-selector">
+                    <button type="button" id="color-selector-trigger"
+                            class="color-selector-trigger"
+                            onclick="toggleColorSelector()">
+                        <span id="color-selector-label">Seleccioná colores</span>
+                        <i data-lucide="chevron-down" class="color-selector-chevron"></i>
+                    </button>
+                    <div class="color-selector-panel" id="color-selector-panel">
+                        <!-- Opciones generadas por inicializarColorSelector() -->
+                    </div>
+                </div>
             </div>
 
             <div class="input-group">
@@ -476,6 +487,23 @@
             <button class="btn-outline" onclick="volverAtras()">Cancelar</button>
             <button class="btn-danger" onclick="eliminarProducto()">Sí, eliminar</button>
         </div>
+    </main>
+
+    <!-- Vista: Gestionar stock (empleados) -->
+    <main id="vista-gestionar-stock" class="vista">
+        <div class="gstock-info-card">
+            <h3 id="gstock-nombre" class="gstock-nombre">-</h3>
+            <p id="gstock-meta" class="gstock-meta">-</p>
+        </div>
+        <div class="input-group">
+            <label>Stock por talle</label>
+            <div id="gstock-grid" class="inv-stock-grid">
+                <!-- Generado por abrirGestionarStock() -->
+            </div>
+        </div>
+        <button class="btn-primary btn-submit" id="btn-guardar-stock" onclick="guardarCambioStock()">
+            Guardar cambios
+        </button>
     </main>
 
     <!-- ============================================================
@@ -838,8 +866,8 @@
             </button>
             <button class="btn-outline" onclick="abrirHistorialCliente()">Ver movimientos</button>
             <button class="btn-outline" onclick="abrirHistorialCompras()">Ver compras</button>
-            <button class="btn-outline" onclick="abrirEditarCliente(clienteActual?.id)">Editar datos</button>
-            <button class="btn-danger" onclick="confirmarEliminarCliente(clienteActual?.id)">Eliminar cliente</button>
+            <button class="btn-outline solo-admin" onclick="abrirEditarCliente(clienteActual?.id)">Editar datos</button>
+            <button class="btn-danger solo-admin" onclick="confirmarEliminarCliente(clienteActual?.id)">Eliminar cliente</button>
         </div>
     </main>
 
@@ -1056,7 +1084,7 @@
                 <span>Mi perfil</span>
                 <i data-lucide="chevron-right" class="config-chevron"></i>
             </button>
-            <button class="config-item" onclick="irAGestionUsuarios()">
+            <button class="config-item solo-admin" onclick="irAGestionUsuarios()">
                 <i data-lucide="users"></i>
                 <span>Gestión de usuarios</span>
                 <i data-lucide="chevron-right" class="config-chevron"></i>
