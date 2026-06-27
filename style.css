@@ -82,7 +82,27 @@ body {
 #app-container[data-vista="vista-historial-cliente"] .header-titulo--historial-cliente,
 #app-container[data-vista="vista-seleccionar-cliente"] .header-titulo--seleccionar-cliente,
 #app-container[data-vista="vista-metodo-pago"] .header-titulo--metodo-pago,
-#app-container[data-vista="vista-confirmar-pago"] .header-titulo--confirmar-pago {
+#app-container[data-vista="vista-confirmar-pago"]              .header-titulo--confirmar-pago,
+#app-container[data-vista="vista-clientes"]                    .header-titulo--clientes,
+#app-container[data-vista="vista-form-producto"]               .header-titulo--form-producto,
+#app-container[data-vista="vista-confirmar-eliminar"]          .header-titulo--confirmar-eliminar,
+#app-container[data-vista="vista-seleccionar-producto"]        .header-titulo--seleccionar-producto,
+#app-container[data-vista="vista-producto"]                    .header-titulo--producto,
+#app-container[data-vista="vista-agregar-cliente"]             .header-titulo--agregar-cliente,
+#app-container[data-vista="vista-cliente-agregado"]            .header-titulo--cliente-agregado,
+#app-container[data-vista="vista-registrar-deuda"]             .header-titulo--registrar-deuda,
+#app-container[data-vista="vista-pago-registrado"]             .header-titulo--pago-registrado,
+#app-container[data-vista="vista-deuda-registrada"]            .header-titulo--deuda-registrada,
+#app-container[data-vista="vista-detalle-cliente"]             .header-titulo--detalle-cliente,
+#app-container[data-vista="vista-historial-compras"]           .header-titulo--historial-compras,
+#app-container[data-vista="vista-registrar-pago"]              .header-titulo--registrar-pago,
+#app-container[data-vista="vista-pago-cliente-ok"]             .header-titulo--pago-cliente-ok,
+#app-container[data-vista="vista-editar-cliente"]              .header-titulo--editar-cliente,
+#app-container[data-vista="vista-confirmar-eliminar-cliente"]  .header-titulo--confirmar-eliminar-cliente,
+#app-container[data-vista="vista-items-venta"]                 .header-titulo--items-venta,
+#app-container[data-vista="vista-seleccionar-talle"]           .header-titulo--seleccionar-talle,
+#app-container[data-vista="vista-confirmar-cambio"]            .header-titulo--confirmar-cambio,
+#app-container[data-vista="vista-cambio-realizado"]            .header-titulo--cambio-realizado {
     display: block;
 }
 
@@ -110,7 +130,7 @@ body {
     flex-direction: column;
     flex-grow: 1;
     overflow-y: auto;
-    padding: 10px 20px 90px 20px;
+    padding: 24px 20px 90px 20px;
 }
 
 /* Solo se dibuja en pantalla la vista que tenga la clase ".active" */
@@ -977,6 +997,20 @@ body {
 /* ==========================================
    ETAPA 2: FORMULARIO DE PRODUCTO
    ========================================== */
+
+/* Formulario de producto — respiración del header y botón al fondo */
+#vista-form-producto {
+    padding-top: 24px;
+    padding-bottom: clamp(24px, 4dvh, 48px);
+}
+
+#vista-form-producto .form-moniarquia {
+    flex: 1;
+}
+
+#vista-form-producto .btn-submit {
+    margin-top: auto;
+}
 
 /* Grid de stock por talla (S / M / L / XL) */
 .inv-stock-grid {

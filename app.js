@@ -29,6 +29,10 @@ let cantidadSeleccionada = 1;
 let filtroVentaCategoria = 'Todos';
 let terminoVentaBusqueda = '';
 
+// Estado edición/eliminación de clientes
+let clienteEditandoId  = null;
+let clienteAEliminarId = null;
+
 // Estado de clientes y ventas (Etapa 4)
 let listClientesGlobal = [];
 let clienteSeleccionado = null;
@@ -499,12 +503,14 @@ function renderizarStockGrid(categoria, stockActual) {
 
 function abrirFormProducto(id) {
     productoEditandoId = id;
-    const titulo = document.getElementById('form-titulo');
+    const titulo     = document.getElementById('form-titulo');          // eliminado del HTML, puede ser null
+    const headerSpan = document.getElementById('header-titulo-form-producto');
 
     if (id) {
         const p = listaPrendasGlobal.find(prod => prod.id === id);
         if (!p) return;
-        if (titulo) titulo.textContent = 'Editar producto';
+        if (titulo)     titulo.textContent     = 'Editar producto';
+        if (headerSpan) headerSpan.textContent = 'Editar producto';
         const stockPorTalla = p.stockPorTalla || {};
         const color = Array.isArray(p.colores) ? p.colores.join(', ') : (p.colores || '');
         document.getElementById('inv-nombre').value    = p.nombre    || '';
@@ -515,7 +521,8 @@ function abrirFormProducto(id) {
         document.getElementById('inv-foto').value      = p.foto_url || p.imagen || '';
         renderizarStockGrid(p.categoria, stockPorTalla);
     } else {
-        if (titulo) titulo.textContent = 'Agregar producto';
+        if (titulo)     titulo.textContent     = 'Agregar producto';
+        if (headerSpan) headerSpan.textContent = 'Agregar producto';
         document.getElementById('form-inventario-producto').reset();
         renderizarStockGrid('', {});
     }
@@ -947,20 +954,37 @@ function renderizarListaClientes(contenedorId, modoSeleccion) {
         return;
     }
 
-    const onclick = modoSeleccion
-        ? id => `seleccionarClienteParaVenta('${id}')`
-        : id => `abrirDetalleCliente('${id}')`;
-
     contenedor.innerHTML = filtrados.map(c => {
         const inicial = (c.nombre || '?')[0].toUpperCase();
+        const tel = c.telefono ? `<p class="cliente-dato">${c.telefono}</p>` : '';
+        const em  = c.email    ? `<p class="cliente-dato">${c.email}</p>`    : '';
+
+        const clickHandler = modoSeleccion
+            ? `seleccionarClienteParaVenta('${c.id}')`
+            : `abrirDetalleCliente('${c.id}')`;
+
+        const derechaHTML = modoSeleccion
+            ? `<i data-lucide="chevron-right" class="cliente-chevron"></i>`
+            : `<div class="inv-acciones">
+                   <button class="inv-btn-accion" title="Editar"
+                       onclick="abrirEditarCliente('${c.id}'); event.stopPropagation();">
+                       <i data-lucide="pencil"></i>
+                   </button>
+                   <button class="inv-btn-accion inv-btn-eliminar" title="Eliminar"
+                       onclick="confirmarEliminarCliente('${c.id}'); event.stopPropagation();">
+                       <i data-lucide="trash-2"></i>
+                   </button>
+               </div>`;
+
         return `
-        <div class="cliente-item" onclick="${onclick(c.id)}">
+        <div class="cliente-item" onclick="${clickHandler}">
             <div class="cliente-avatar">${inicial}</div>
             <div class="cliente-info">
                 <p class="cliente-nombre">${c.nombre || ''}</p>
-                <p class="cliente-dato">${c.telefono || c.email || ''}</p>
+                ${tel}
+                ${em}
             </div>
-            <i data-lucide="chevron-right" class="cliente-chevron"></i>
+            ${derechaHTML}
         </div>`;
     }).join('');
 
@@ -1056,6 +1080,100 @@ function guardarCliente(e) {
     .finally(() => {
         if (btn) { btn.disabled = false; btn.textContent = 'Agregar'; }
     });
+}
+
+function abrirEditarCliente(id) {
+    if (!id) return;
+    const c = listClientesGlobal.find(cl => cl.id === id);
+    if (!c) return;
+    clienteEditandoId = id;
+
+    const nombreEl = document.getElementById('edit-cli-nombre');
+    const telEl    = document.getElementById('edit-cli-telefono');
+    const emailEl  = document.getElementById('edit-cli-email');
+
+    if (nombreEl) nombreEl.value = c.nombre   || '';
+    if (telEl)    telEl.value    = c.telefono || '';
+    if (emailEl)  emailEl.value  = c.email    || '';
+
+    navegarA('vista-editar-cliente');
+}
+
+function guardarEdicionCliente(e) {
+    e.preventDefault();
+    if (!clienteEditandoId) return;
+
+    const nombre   = (document.getElementById('edit-cli-nombre')?.value   || '').trim();
+    const telefono = (document.getElementById('edit-cli-telefono')?.value || '').trim();
+    const email    = (document.getElementById('edit-cli-email')?.value    || '').trim();
+
+    if (!nombre) { alert('El nombre es obligatorio.'); return; }
+
+    const btn = document.getElementById('btn-guardar-edicion-cliente');
+    if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
+
+    db.collection('clientes').doc(clienteEditandoId).update({ nombre, telefono, email })
+        .then(() => {
+            if (clienteActual?.id === clienteEditandoId) {
+                clienteActual = { ...clienteActual, nombre, telefono, email };
+                renderizarDetalleCliente();
+            }
+            clienteEditandoId = null;
+            volverAtras();
+        })
+        .catch(err => alert('Error al guardar: ' + err.message))
+        .finally(() => {
+            if (btn) { btn.disabled = false; btn.textContent = 'Guardar cambios'; }
+        });
+}
+
+function confirmarEliminarCliente(id) {
+    if (!id) return;
+    const c = listClientesGlobal.find(cl => cl.id === id);
+    if (!c) return;
+    clienteAEliminarId = id;
+
+    const nombreEl = document.getElementById('confirmar-cli-nombre');
+    const advEl    = document.getElementById('confirmar-cli-advertencia');
+
+    if (nombreEl) nombreEl.textContent = `¿Eliminar a "${c.nombre}"?`;
+
+    if (advEl) {
+        const deuda = c.deudaTotal || 0;
+        if (deuda > 0) {
+            advEl.textContent  = `⚠ Este cliente tiene una deuda pendiente de $ ${deuda.toLocaleString('es-AR')}.`;
+            advEl.style.display = 'block';
+        } else {
+            advEl.style.display = 'none';
+        }
+    }
+
+    navegarA('vista-confirmar-eliminar-cliente');
+}
+
+function eliminarClienteConfirmado() {
+    if (!clienteAEliminarId) return;
+
+    const btn = document.querySelector('#vista-confirmar-eliminar-cliente .btn-danger');
+    if (btn) { btn.disabled = true; btn.textContent = 'Eliminando...'; }
+
+    db.collection('clientes').doc(clienteAEliminarId).delete()
+        .then(() => {
+            if (clienteActual?.id === clienteAEliminarId) {
+                clienteActual = null;
+                if (unsubscribeMovimientos) { unsubscribeMovimientos(); unsubscribeMovimientos = null; }
+            }
+            clienteAEliminarId = null;
+            // Limpiar entradas del historial relacionadas con el cliente eliminado
+            historialNavegacion = historialNavegacion.filter(v =>
+                v !== 'vista-detalle-cliente' && v !== 'vista-confirmar-eliminar-cliente'
+            );
+            navegarA('vista-clientes', { silencioso: true });
+        })
+        .catch(err => alert('Error al eliminar: ' + err.message))
+        .finally(() => {
+            if (btn) { btn.disabled = false; btn.textContent = 'Sí, eliminar'; }
+        });
 }
 
 function continuarTrasAgregarCliente() {
