@@ -102,7 +102,16 @@ body {
 #app-container[data-vista="vista-items-venta"]                 .header-titulo--items-venta,
 #app-container[data-vista="vista-seleccionar-talle"]           .header-titulo--seleccionar-talle,
 #app-container[data-vista="vista-confirmar-cambio"]            .header-titulo--confirmar-cambio,
-#app-container[data-vista="vista-cambio-realizado"]            .header-titulo--cambio-realizado {
+#app-container[data-vista="vista-cambio-realizado"]            .header-titulo--cambio-realizado,
+#app-container[data-vista="vista-configuracion"]               .header-titulo--configuracion,
+#app-container[data-vista="vista-gestion-usuarios"]            .header-titulo--gestion-usuarios,
+#app-container[data-vista="vista-crear-usuario"]               .header-titulo--crear-usuario,
+#app-container[data-vista="vista-editar-usuario"]              .header-titulo--editar-usuario,
+#app-container[data-vista="vista-cambiar-rol"]                 .header-titulo--cambiar-rol,
+#app-container[data-vista="vista-confirmar-usuario"]           .header-titulo--confirmar-usuario,
+#app-container[data-vista="vista-mi-perfil"]                   .header-titulo--mi-perfil,
+#app-container[data-vista="vista-editar-perfil"]               .header-titulo--editar-perfil,
+#app-container[data-vista="vista-cambiar-password"]            .header-titulo--cambiar-password {
     display: block;
 }
 
@@ -1579,6 +1588,199 @@ body {
     .home-deco { margin-top: 4px; }
     #vista-perfil-creado { padding: clamp(16px, 3dvh, 28px) 20px clamp(20px, 4dvh, 36px); gap: clamp(12px, 2.5dvh, 24px); }
     #vista-pago-cliente-ok { padding: clamp(16px, 3dvh, 28px) 20px clamp(20px, 4dvh, 36px); gap: clamp(12px, 2.5dvh, 24px); }
+}
+
+/* ==========================================
+   GESTIÓN DE USUARIOS
+   ========================================== */
+
+/* Botón "Crear usuario" anclado al fondo de la lista */
+.usuarios-fab {
+    margin-top: auto;
+    flex-shrink: 0;
+}
+
+/* Card de usuario en la lista */
+.usuario-card {
+    background-color: var(--blanco);
+    border-radius: 12px;
+    border: 1px solid var(--negro-pleno);
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: var(--sombra);
+}
+
+/* Badges de rol y estado */
+.usuario-badges {
+    display: flex;
+    gap: 5px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+}
+
+.badge-rol,
+.badge-estado {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 4px;
+    text-transform: capitalize;
+}
+
+.badge-rol--administrador { background-color: #E3F2FD; color: #1565C0; }
+.badge-rol--empleado       { background-color: #F3E5F5; color: #6A1B9A; }
+.badge-estado--activo      { background-color: #E8F5E9; color: #2E7D32; }
+.badge-estado--inactivo    { background-color: #FFEBEE; color: #C62828; }
+
+/* Acciones de la card de usuario (grid 2×2) */
+.usuario-acciones {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+/* Card de cambiar rol */
+.cambiar-rol-card {
+    background-color: var(--blanco);
+    border: 1px solid var(--negro-pleno);
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: var(--sombra);
+    flex-shrink: 0;
+}
+
+.cambiar-rol-nombre {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--negro-texto);
+    margin-bottom: 4px;
+}
+
+.cambiar-rol-correo {
+    font-size: 13px;
+    color: var(--gris);
+    margin-bottom: 8px;
+}
+
+.cambiar-rol-actual {
+    font-size: 13px;
+    color: var(--negro-texto);
+}
+
+/* Pantallas de éxito de usuario/perfil/contraseña */
+#vista-exito-usuario,
+#vista-exito-perfil,
+#vista-exito-password {
+    padding: clamp(16px, 4dvh, 28px) 20px clamp(20px, 4dvh, 36px);
+    gap: clamp(14px, 3dvh, 24px);
+    justify-content: center;
+}
+
+/* Mi perfil */
+.perfil-card {
+    background-color: var(--blanco);
+    border: 1px solid var(--negro-pleno);
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: var(--sombra);
+    flex-shrink: 0;
+}
+
+.perfil-avatar {
+    width: 56px;
+    height: 56px;
+    background-color: var(--rojo-moniarquia);
+    border-radius: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--blanco);
+    flex-shrink: 0;
+}
+
+.perfil-info { flex: 1; min-width: 0; }
+
+.perfil-nombre {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--negro-texto);
+    margin-bottom: 4px;
+}
+
+.perfil-correo {
+    font-size: 13px;
+    color: var(--gris);
+}
+
+/* Formularios de perfil/contraseña: botón al fondo */
+#vista-editar-perfil .form-moniarquia,
+#vista-cambiar-password .form-moniarquia {
+    flex: 1;
+}
+
+#vista-editar-perfil .btn-submit,
+#vista-cambiar-password .btn-submit {
+    margin-top: auto;
+}
+
+/* ==========================================
+   CONFIGURACIÓN
+   ========================================== */
+
+.config-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.config-item {
+    background-color: var(--blanco);
+    border: 1px solid rgba(0,0,0,0.12);
+    border-radius: 12px;
+    padding: 16px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--negro-texto);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    transition: transform 0.1s;
+    text-align: left;
+    width: 100%;
+}
+
+.config-item:active { transform: scale(0.98); }
+
+.config-item > svg:first-child {
+    width: 20px;
+    height: 20px;
+    stroke: var(--rojo-moniarquia);
+    flex-shrink: 0;
+}
+
+.config-item span { flex: 1; }
+
+/* <i data-lucide="chevron-right"> → <svg class="config-chevron"> */
+.config-chevron {
+    width: 18px;
+    height: 18px;
+    stroke: var(--gris);
+    flex-shrink: 0;
+}
+
+.config-item-cerrar {
+    color: var(--rojo-moniarquia);
 }
 
 /* ==========================================

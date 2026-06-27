@@ -29,6 +29,24 @@ let cantidadSeleccionada = 1;
 let filtroVentaCategoria = 'Todos';
 let terminoVentaBusqueda = '';
 
+// ── MI PERFIL (datos locales — preparado para Firebase Auth + /usuarios) ──────────
+// TODO: reemplazar por los datos del usuario autenticado (firebase.auth().currentUser + doc /usuarios/{uid})
+let usuarioActual = {
+    nombre: 'Oscar Castelani',
+    correo: 'castelani83@gmail.com',
+    rol:    'administrador',
+    estado: 'activo'
+};
+
+// ── GESTIÓN DE USUARIOS (datos locales — preparado para reemplazar por Firestore) ──
+let usuariosLocales = [
+    { id: 'u1', nombre: 'Admin Principal',  correo: 'admin@moniarquia.com',  rol: 'administrador', estado: 'activo'   },
+    { id: 'u2', nombre: 'Oscar Castelani',  correo: 'oscar@moniarquia.com',  rol: 'empleado',       estado: 'activo'   },
+];
+let usuarioEditandoId   = null;
+let usuarioAccionId     = null;
+let usuarioAccionTipo   = null; // 'activar' | 'desactivar' | 'eliminar'
+
 // Estado edición/eliminación de clientes
 let clienteEditandoId  = null;
 let clienteAEliminarId = null;
@@ -379,6 +397,343 @@ function cerrarMenu() {
 function mostrarProximamente(seccion) {
     cerrarMenu();
     alert(`"${seccion}" estará disponible próximamente.`);
+}
+
+// ── FUNCIONES DE MI PERFIL ───────────────────────────────────────────────────
+
+function irAMiPerfil() {
+    renderizarMiPerfil();
+    navegarA('vista-mi-perfil');
+}
+
+function renderizarMiPerfil() {
+    const u       = usuarioActual;
+    const inicial = (u.nombre || '?')[0].toUpperCase();
+
+    const avatarEl = document.getElementById('perfil-avatar');
+    const nombreEl = document.getElementById('perfil-nombre');
+    const correoEl = document.getElementById('perfil-correo');
+    const rolEl    = document.getElementById('perfil-badge-rol');
+    const estEl    = document.getElementById('perfil-badge-estado');
+
+    if (avatarEl) avatarEl.textContent = inicial;
+    if (nombreEl) nombreEl.textContent = u.nombre || '-';
+    if (correoEl) correoEl.textContent = u.correo || '-';
+    if (rolEl)    { rolEl.textContent = u.rol || '-';    rolEl.className = `badge-rol badge-rol--${u.rol}`; }
+    if (estEl)    { estEl.textContent = u.estado || '-'; estEl.className = `badge-estado badge-estado--${u.estado}`; }
+}
+
+function abrirEditarPerfil() {
+    document.getElementById('editar-perfil-nombre').value = usuarioActual.nombre || '';
+    document.getElementById('editar-perfil-correo').value = usuarioActual.correo || '';
+    navegarA('vista-editar-perfil');
+}
+
+function guardarEdicionPerfil(e) {
+    e.preventDefault();
+    const nombre = (document.getElementById('editar-perfil-nombre')?.value || '').trim();
+    const correo = (document.getElementById('editar-perfil-correo')?.value || '').trim();
+
+    if (!nombre || !correo) { alert('Completá todos los campos.'); return; }
+
+    const btn = document.getElementById('btn-guardar-perfil');
+    if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
+
+    // TODO: reemplazar por firebase.auth().currentUser.updateProfile({ displayName: nombre })
+    //       y db.collection('usuarios').doc(uid).update({ nombre, correo })
+    usuarioActual.nombre = nombre;
+    usuarioActual.correo = correo;
+
+    if (btn) { btn.disabled = false; btn.textContent = 'Guardar cambios'; }
+    navegarA('vista-exito-perfil', { silencioso: true });
+}
+
+// ── FUNCIONES DE CAMBIAR CONTRASEÑA ──────────────────────────────────────────
+
+function irACambiarPassword() {
+    ['pwd-actual', 'pwd-nueva', 'pwd-nueva2'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    navegarA('vista-cambiar-password');
+}
+
+function guardarCambioPassword(e) {
+    e.preventDefault();
+    const actual = document.getElementById('pwd-actual')?.value || '';
+    const nueva  = document.getElementById('pwd-nueva')?.value  || '';
+    const nueva2 = document.getElementById('pwd-nueva2')?.value || '';
+
+    if (!actual || !nueva || !nueva2) {
+        alert('Completá todos los campos.');
+        return;
+    }
+    if (nueva.length < 6) {
+        alert('La nueva contraseña debe tener al menos 6 caracteres.');
+        return;
+    }
+    if (nueva !== nueva2) {
+        alert('Las contraseñas no coinciden. Verificá e intentá de nuevo.');
+        return;
+    }
+
+    const btn = document.getElementById('btn-cambiar-pwd');
+    if (btn) { btn.disabled = true; btn.textContent = 'Cambiando...'; }
+
+    // TODO: reemplazar por:
+    //   const cred = firebase.auth.EmailAuthProvider.credential(usuarioActual.correo, actual)
+    //   firebase.auth().currentUser.reauthenticateWithCredential(cred)
+    //     .then(() => firebase.auth().currentUser.updatePassword(nueva))
+    //     .then(() => navegarA('vista-exito-password', { silencioso: true }))
+    //     .catch(err => alert('Contraseña actual incorrecta.'))
+
+    if (btn) { btn.disabled = false; btn.textContent = 'Cambiar contraseña'; }
+    navegarA('vista-exito-password', { silencioso: true });
+}
+
+// ── FUNCIONES DE GESTIÓN DE USUARIOS ─────────────────────────────────────────
+
+function irAGestionUsuarios() {
+    renderizarUsuarios();
+    navegarA('vista-gestion-usuarios');
+}
+
+function renderizarUsuarios() {
+    const lista = document.getElementById('usuarios-lista');
+    if (!lista) return;
+
+    if (usuariosLocales.length === 0) {
+        lista.innerHTML = '<p class="cargando" style="text-align:center;padding:20px 0;">No hay usuarios registrados.</p>';
+        return;
+    }
+
+    lista.innerHTML = usuariosLocales.map(u => {
+        const inicial     = (u.nombre || '?')[0].toUpperCase();
+        const colorAvatar = u.rol === 'administrador' ? 'var(--rojo-moniarquia)' : 'var(--rosa-viejo)';
+        const iconoToggle = u.estado === 'activo' ? 'user-x' : 'user-check';
+        const tipoToggle  = u.estado === 'activo' ? 'desactivar' : 'activar';
+        const tituloToggle = u.estado === 'activo' ? 'Desactivar' : 'Activar';
+
+        return `
+        <div class="usuario-card">
+            <div class="cliente-avatar" style="background-color:${colorAvatar};">${inicial}</div>
+            <div class="cliente-info">
+                <p class="cliente-nombre">${u.nombre}</p>
+                <p class="cliente-dato">${u.correo}</p>
+                <div class="usuario-badges">
+                    <span class="badge-rol badge-rol--${u.rol}">${u.rol}</span>
+                    <span class="badge-estado badge-estado--${u.estado}">${u.estado}</span>
+                </div>
+            </div>
+            <div class="usuario-acciones">
+                <button class="inv-btn-accion" title="Editar" onclick="abrirEditarUsuario('${u.id}')">
+                    <i data-lucide="pencil"></i>
+                </button>
+                <button class="inv-btn-accion" title="Cambiar rol" onclick="abrirCambiarRol('${u.id}')">
+                    <i data-lucide="shield"></i>
+                </button>
+                <button class="inv-btn-accion" title="${tituloToggle}" onclick="confirmarAccionUsuario('${u.id}', '${tipoToggle}')">
+                    <i data-lucide="${iconoToggle}"></i>
+                </button>
+                <button class="inv-btn-accion inv-btn-eliminar" title="Eliminar" onclick="confirmarAccionUsuario('${u.id}', 'eliminar')">
+                    <i data-lucide="trash-2"></i>
+                </button>
+            </div>
+        </div>`;
+    }).join('');
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function abrirCrearUsuario() {
+    usuarioEditandoId = null;
+    const form = document.getElementById('form') || null;
+    ['nuevo-usr-nombre', 'nuevo-usr-correo', 'nuevo-usr-rol'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    navegarA('vista-crear-usuario');
+}
+
+function guardarNuevoUsuario(e) {
+    e.preventDefault();
+    const nombre = (document.getElementById('nuevo-usr-nombre')?.value || '').trim();
+    const correo = (document.getElementById('nuevo-usr-correo')?.value || '').trim();
+    const rol    =  document.getElementById('nuevo-usr-rol')?.value || '';
+
+    if (!nombre || !correo || !rol) { alert('Completá todos los campos.'); return; }
+
+    const btn = document.getElementById('btn-guardar-nuevo-usuario');
+    if (btn) { btn.disabled = true; btn.textContent = 'Creando...'; }
+
+    // TODO: reemplazar por db.collection('usuarios').add({ nombre, correo, rol, estado: 'activo', createdAt: ... })
+    usuariosLocales.push({
+        id:     `u_${Date.now()}`,
+        nombre, correo, rol, estado: 'activo'
+    });
+
+    if (btn) { btn.disabled = false; btn.textContent = 'Crear usuario'; }
+    mostrarExitoUsuario('¡Usuario creado correctamente!', `${nombre} fue agregado como ${rol}.`);
+}
+
+function abrirEditarUsuario(id) {
+    const u = usuariosLocales.find(usr => usr.id === id);
+    if (!u) return;
+    usuarioEditandoId = id;
+
+    document.getElementById('edit-usr-nombre').value = u.nombre || '';
+    document.getElementById('edit-usr-correo').value = u.correo || '';
+    document.getElementById('edit-usr-rol').value    = u.rol    || 'empleado';
+
+    navegarA('vista-editar-usuario');
+}
+
+function guardarEdicionUsuario(e) {
+    e.preventDefault();
+    if (!usuarioEditandoId) return;
+    const idx = usuariosLocales.findIndex(u => u.id === usuarioEditandoId);
+    if (idx === -1) return;
+
+    const nombre = (document.getElementById('edit-usr-nombre')?.value || '').trim();
+    const correo = (document.getElementById('edit-usr-correo')?.value || '').trim();
+    const rol    =  document.getElementById('edit-usr-rol')?.value || '';
+
+    if (!nombre || !correo) { alert('Completá nombre y correo.'); return; }
+
+    const btn = document.getElementById('btn-guardar-edicion-usuario');
+    if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
+
+    // TODO: reemplazar por db.collection('usuarios').doc(usuarioEditandoId).update({ nombre, correo, rol })
+    usuariosLocales[idx] = { ...usuariosLocales[idx], nombre, correo, rol };
+
+    usuarioEditandoId = null;
+    if (btn) { btn.disabled = false; btn.textContent = 'Guardar cambios'; }
+    mostrarExitoUsuario('¡Usuario actualizado correctamente!', `${nombre} fue actualizado.`);
+}
+
+function abrirCambiarRol(id) {
+    const u = usuariosLocales.find(usr => usr.id === id);
+    if (!u) return;
+    usuarioEditandoId = id;
+
+    document.getElementById('cambiar-rol-nombre').textContent  = u.nombre;
+    document.getElementById('cambiar-rol-correo').textContent  = u.correo;
+    document.getElementById('cambiar-rol-actual').textContent  = u.rol;
+    document.getElementById('cambiar-rol-select').value        = u.rol;
+
+    navegarA('vista-cambiar-rol');
+}
+
+function guardarCambioRol(e) {
+    e.preventDefault();
+    if (!usuarioEditandoId) return;
+    const idx = usuariosLocales.findIndex(u => u.id === usuarioEditandoId);
+    if (idx === -1) return;
+
+    const nuevoRol = document.getElementById('cambiar-rol-select')?.value || '';
+    if (!nuevoRol) return;
+
+    const btn = document.getElementById('btn-guardar-rol');
+    if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
+
+    // TODO: reemplazar por db.collection('usuarios').doc(usuarioEditandoId).update({ rol: nuevoRol })
+    usuariosLocales[idx].rol = nuevoRol;
+
+    usuarioEditandoId = null;
+    if (btn) { btn.disabled = false; btn.textContent = 'Confirmar cambio'; }
+    mostrarExitoUsuario('¡Rol actualizado correctamente!', `El usuario ahora tiene rol de ${nuevoRol}.`);
+}
+
+function confirmarAccionUsuario(id, tipo) {
+    const u = usuariosLocales.find(usr => usr.id === id);
+    if (!u) return;
+    usuarioAccionId   = id;
+    usuarioAccionTipo = tipo;
+
+    const config = {
+        activar:    { pregunta: '¿Deseás activar este usuario?',    btn: 'Activar',    adv: null },
+        desactivar: { pregunta: '¿Deseás desactivar este usuario?', btn: 'Desactivar', adv: null },
+        eliminar:   { pregunta: '¿Deseás eliminar este usuario?',   btn: 'Eliminar',   adv: 'Esta acción no se puede deshacer.' },
+    };
+
+    const t = config[tipo];
+    document.getElementById('confirmar-usuario-pregunta').textContent = t.pregunta;
+    document.getElementById('confirmar-usuario-info').textContent     = `${u.nombre} — ${u.correo}`;
+
+    const advEl = document.getElementById('confirmar-usuario-advertencia');
+    if (advEl) {
+        advEl.textContent   = t.adv || '';
+        advEl.style.display = t.adv ? 'block' : 'none';
+    }
+
+    const btn = document.getElementById('btn-ejecutar-accion-usuario');
+    if (btn) {
+        btn.textContent = t.btn;
+        btn.className   = tipo === 'activar' ? 'btn-primary' : 'btn-danger';
+    }
+
+    navegarA('vista-confirmar-usuario');
+}
+
+function ejecutarAccionUsuario() {
+    const idx = usuariosLocales.findIndex(u => u.id === usuarioAccionId);
+    if (idx === -1) return;
+
+    const u   = usuariosLocales[idx];
+    const btn = document.getElementById('btn-ejecutar-accion-usuario');
+    if (btn) btn.disabled = true;
+
+    // TODO: reemplazar por operaciones en db.collection('usuarios').doc(usuarioAccionId)
+    let titulo, desc;
+    if (usuarioAccionTipo === 'activar') {
+        usuariosLocales[idx].estado = 'activo';
+        titulo = '¡Usuario activado correctamente!';
+        desc   = `${u.nombre} fue activado y puede volver a usar la aplicación.`;
+    } else if (usuarioAccionTipo === 'desactivar') {
+        usuariosLocales[idx].estado = 'inactivo';
+        titulo = '¡Usuario desactivado correctamente!';
+        desc   = `${u.nombre} fue desactivado.`;
+    } else if (usuarioAccionTipo === 'eliminar') {
+        const nombre = u.nombre;
+        usuariosLocales.splice(idx, 1);
+        titulo = '¡Usuario eliminado correctamente!';
+        desc   = `${nombre} fue eliminado del sistema.`;
+    }
+
+    usuarioAccionId   = null;
+    usuarioAccionTipo = null;
+    if (btn) btn.disabled = false;
+    mostrarExitoUsuario(titulo, desc);
+}
+
+function mostrarExitoUsuario(titulo, desc) {
+    document.getElementById('exito-usuario-titulo').textContent = titulo;
+    document.getElementById('exito-usuario-desc').textContent   = desc;
+    navegarA('vista-exito-usuario', { silencioso: true });
+}
+
+function irAConfiguracion() {
+    navegarA('vista-configuracion');
+    cerrarMenu();
+}
+
+function cerrarSesionLocal() {
+    cerrarMenu();
+
+    // Limpiar estado de la sesión
+    carritoVenta = [];
+    sincronizarCarritoVenta();
+    clienteSeleccionado = null;
+    metodoPagoActual    = null;
+    clienteActual       = null;
+    if (typeof unsubscribeMovimientos === 'function') {
+        unsubscribeMovimientos();
+        unsubscribeMovimientos = null;
+    }
+    historialNavegacion = [];
+
+    // Navegar al inicio
+    navegarA('vista-home', { silencioso: true });
 }
 
 // =====================================================================
