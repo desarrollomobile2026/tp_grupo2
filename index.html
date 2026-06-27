@@ -25,12 +25,32 @@
         </button>
         <span class="header-titulo header-titulo--inventario">Inventario</span>
         <span class="header-titulo header-titulo--carrito">Carrito</span>
+        <span class="header-titulo header-titulo--clientes">Clientes</span>
         <span class="header-titulo header-titulo--historial-cliente">Movimientos</span>
         <span class="header-titulo header-titulo--seleccionar-cliente">Asociar a cliente</span>
         <span class="header-titulo header-titulo--metodo-pago">Método de pago</span>
         <span class="header-titulo header-titulo--confirmar-pago">Confirmar pago</span>
         <span class="header-titulo header-titulo--cambios">Cambio o devolución</span>
         <span class="header-titulo header-titulo--escanear">Escanear producto</span>
+        <span class="header-titulo header-titulo--form-producto" id="header-titulo-form-producto">Agregar producto</span>
+        <span class="header-titulo header-titulo--confirmar-eliminar">Eliminar producto</span>
+        <span class="header-titulo header-titulo--seleccionar-producto">Buscar producto</span>
+        <span class="header-titulo header-titulo--producto">Detalle del producto</span>
+        <span class="header-titulo header-titulo--agregar-cliente">Agregar cliente</span>
+        <span class="header-titulo header-titulo--cliente-agregado">Cliente agregado</span>
+        <span class="header-titulo header-titulo--registrar-deuda">Cuenta corriente</span>
+        <span class="header-titulo header-titulo--pago-registrado">Pago registrado</span>
+        <span class="header-titulo header-titulo--deuda-registrada">Deuda registrada</span>
+        <span class="header-titulo header-titulo--detalle-cliente">Detalle del cliente</span>
+        <span class="header-titulo header-titulo--historial-compras">Compras</span>
+        <span class="header-titulo header-titulo--registrar-pago">Registrar pago</span>
+        <span class="header-titulo header-titulo--pago-cliente-ok">Pago registrado</span>
+        <span class="header-titulo header-titulo--editar-cliente">Editar cliente</span>
+        <span class="header-titulo header-titulo--confirmar-eliminar-cliente">Eliminar cliente</span>
+        <span class="header-titulo header-titulo--items-venta">Seleccionar producto</span>
+        <span class="header-titulo header-titulo--seleccionar-talle">Nuevo talle</span>
+        <span class="header-titulo header-titulo--confirmar-cambio">Confirmar cambio</span>
+        <span class="header-titulo header-titulo--cambio-realizado">Cambio realizado</span>
         <button class="btn-nav" id="btn-menu" onclick="abrirMenu()">
             <i data-lucide="menu"></i>
         </button>
@@ -150,10 +170,6 @@
     </main>
 
     <main id="vista-form-producto" class="vista">
-        <div class="vista-header">
-            <h2 id="form-titulo" class="section-title">Agregar producto</h2>
-        </div>
-
         <form id="form-inventario-producto" class="form-moniarquia" onsubmit="guardarProducto(event)">
 
             <div class="input-group">
@@ -225,10 +241,7 @@
     </main>
 
     <main id="vista-confirmar-eliminar" class="vista">
-        <div class="vista-header">
-            <h2 class="section-title">Eliminar producto</h2>
-            <p class="vista-desc">Esta acción no se puede deshacer</p>
-        </div>
+        <p class="vista-desc">Esta acción no se puede deshacer</p>
         <div class="confirmar-card">
             <i data-lucide="trash-2" class="confirmar-icono"></i>
             <p id="confirmar-nombre-producto" class="confirmar-nombre">¿Eliminar este producto?</p>
@@ -443,10 +456,7 @@
 
     <!-- 3. Formulario alta de cliente -->
     <main id="vista-agregar-cliente" class="vista">
-        <div class="vista-header">
-            <h2 class="section-title">Agregar cliente</h2>
-            <p class="vista-desc">Completá los datos para registrar un nuevo cliente</p>
-        </div>
+        <p class="vista-desc">Completá los datos para registrar un nuevo cliente</p>
         <form id="form-agregar-cliente" class="form-moniarquia" onsubmit="guardarCliente(event)">
             <div class="input-group">
                 <label>Nombre completo</label>
@@ -503,10 +513,7 @@
 
     <!-- 6. Registrar deuda (Cuenta corriente) -->
     <main id="vista-registrar-deuda" class="vista">
-        <div class="vista-header">
-            <h2 class="section-title">Cuenta corriente</h2>
-            <p class="vista-desc">Indicá cuánto abona el cliente ahora</p>
-        </div>
+        <p class="vista-desc">Indicá cuánto abona el cliente ahora</p>
         <div class="deuda-resumen-card">
             <div class="deuda-fila">
                 <span>Total de la venta:</span>
@@ -606,6 +613,8 @@
             </button>
             <button class="btn-outline" onclick="abrirHistorialCliente()">Ver movimientos</button>
             <button class="btn-outline" onclick="abrirHistorialCompras()">Ver compras</button>
+            <button class="btn-outline" onclick="abrirEditarCliente(clienteActual?.id)">Editar datos</button>
+            <button class="btn-danger" onclick="confirmarEliminarCliente(clienteActual?.id)">Eliminar cliente</button>
         </div>
     </main>
 
@@ -619,10 +628,7 @@
 
     <!-- 3. Historial de compras -->
     <main id="vista-historial-compras" class="vista">
-        <div class="vista-header">
-            <h2 class="section-title">Compras</h2>
-            <p class="vista-desc" id="compras-cliente-nombre"></p>
-        </div>
+        <p class="vista-desc" id="compras-cliente-nombre"></p>
         <div id="compras-lista" class="historial-lista">
             <p class="cargando">Cargando compras...</p>
         </div>
@@ -630,9 +636,6 @@
 
     <!-- 4. Formulario de pago -->
     <main id="vista-registrar-pago" class="vista">
-        <div class="vista-header">
-            <h2 class="section-title">Registrar pago</h2>
-        </div>
         <div class="pago-cc-cliente-wrap">
             <p id="pago-cc-nombre" class="pago-cc-nombre">-</p>
             <div class="deuda-fila">
@@ -680,6 +683,40 @@
         </div>
     </main>
 
+    <!-- Editar cliente -->
+    <main id="vista-editar-cliente" class="vista">
+        <form class="form-moniarquia" onsubmit="guardarEdicionCliente(event)">
+            <div class="input-group">
+                <label>Nombre completo</label>
+                <input type="text" id="edit-cli-nombre" placeholder="Ej: María del Carmen" required>
+            </div>
+            <div class="input-group">
+                <label>Teléfono</label>
+                <input type="tel" id="edit-cli-telefono" placeholder="Ej: +54 9 11 1234-5678">
+            </div>
+            <div class="input-group">
+                <label>Correo</label>
+                <input type="email" id="edit-cli-email" placeholder="Ej: maria@gmail.com">
+            </div>
+            <button type="submit" class="btn-primary btn-submit" id="btn-guardar-edicion-cliente">Guardar cambios</button>
+        </form>
+    </main>
+
+    <!-- Confirmar eliminar cliente -->
+    <main id="vista-confirmar-eliminar-cliente" class="vista">
+        <p class="vista-desc">Esta acción no se puede deshacer</p>
+        <div class="confirmar-card">
+            <i data-lucide="trash-2" class="confirmar-icono"></i>
+            <p id="confirmar-cli-nombre" class="confirmar-nombre">¿Eliminar este cliente?</p>
+            <p id="confirmar-cli-advertencia" class="confirmar-desc" style="display:none; color: var(--rojo-moniarquia);"></p>
+            <p class="confirmar-desc">Los movimientos de cuenta corriente y ventas asociadas no serán eliminados.</p>
+        </div>
+        <div class="confirmar-acciones">
+            <button class="btn-outline" onclick="volverAtras()">Cancelar</button>
+            <button class="btn-danger" onclick="eliminarClienteConfirmado()">Sí, eliminar</button>
+        </div>
+    </main>
+
     <!-- ============================================================
          ETAPA 7: CAMBIOS Y DEVOLUCIONES
          ============================================================ -->
@@ -716,10 +753,7 @@
 
     <!-- 2. Seleccionar producto de la venta -->
     <main id="vista-items-venta" class="vista">
-        <div class="vista-header">
-            <h2 class="section-title">Seleccionar producto</h2>
-            <p class="vista-desc">Elegí el producto que el cliente quiere cambiar de talle</p>
-        </div>
+        <p class="vista-desc">Elegí el producto que el cliente quiere cambiar de talle</p>
         <div id="items-venta-lista" class="historial-lista">
             <!-- Renderizado dinámicamente -->
         </div>
@@ -727,10 +761,7 @@
 
     <!-- 3. Seleccionar nuevo talle -->
     <main id="vista-seleccionar-talle" class="vista">
-        <div class="vista-header">
-            <h2 class="section-title">Nuevo talle</h2>
-            <p class="vista-desc">Seleccioná el talle disponible para el cambio</p>
-        </div>
+        <p class="vista-desc">Seleccioná el talle disponible para el cambio</p>
         <div class="cambio-producto-card">
             <p class="cambio-producto-nombre" id="talle-cambio-producto-nombre">-</p>
             <p class="cambio-talle-actual">Talle actual: <strong id="talle-cambio-actual">-</strong></p>
@@ -742,9 +773,6 @@
 
     <!-- 4. Confirmar cambio -->
     <main id="vista-confirmar-cambio" class="vista">
-        <div class="vista-header">
-            <h2 class="section-title">Confirmar cambio</h2>
-        </div>
         <div class="confirmar-cambio-card">
             <p class="confirmar-cambio-producto" id="confirmar-cambio-producto">-</p>
             <div class="confirmar-cambio-talles">
