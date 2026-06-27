@@ -61,10 +61,99 @@ body {
     min-height: 72px;
 }
 
-/* En el Home el header vuelve a rosa-base sin borde */
-#app-container[data-vista="vista-home"] .top-header {
+/* Avatar de perfil — solo en Home ───────────────────────────────────────── */
+#btn-perfil-home {
+    display: none; /* oculto por defecto, se muestra solo en Home */
+    width: 44px;
+    height: 44px;
+    border-radius: 22px;
+    background-color: var(--rojo-moniarquia);
+    border: none;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--blanco);
+    font-family: 'Inter', sans-serif;
+    transition: opacity 0.15s;
+}
+
+#btn-perfil-home:active { opacity: 0.75; }
+
+/* En Home: mostrar avatar, ocultar btn-volver */
+#app-container[data-vista="vista-home"] #btn-perfil-home { display: flex; }
+#app-container[data-vista="vista-home"] #btn-volver     { display: none; }
+
+/* Tarjeta flotante del perfil */
+.perfil-home-card {
+    position: absolute;
+    top: 80px;   /* justo debajo del header (72px) + 8px de aire */
+    left: 12px;
+    z-index: 300;
+    background-color: var(--blanco);
+    border: 1px solid var(--negro-pleno);
+    border-radius: 12px;
+    padding: 14px 16px;
+    box-shadow: var(--sombra);
+    min-width: 210px;
+    max-width: 260px;
+}
+
+.phc-nombre {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--negro-texto);
+    margin-bottom: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.phc-correo {
+    font-size: 11px;
+    color: var(--gris);
+    margin-bottom: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.phc-rol {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 10px;
+    background-color: var(--rosa-base);
+    color: var(--rojo-moniarquia);
+}
+
+/* En Home y en pantallas de auth el header es rosa-base sin borde */
+#app-container[data-vista="vista-home"] .top-header,
+#app-container[data-vista="vista-splash"] .top-header,
+#app-container[data-vista="vista-login"] .top-header,
+#app-container[data-vista="vista-registro"] .top-header,
+#app-container[data-vista="vista-perfil-creado"] .top-header,
+#app-container[data-vista="vista-recuperar-password"] .top-header,
+#app-container[data-vista="vista-correo-enviado"] .top-header,
+#app-container[data-vista="vista-nueva-password"] .top-header,
+#app-container[data-vista="vista-password-actualizada"] .top-header {
     background-color: var(--rosa-base);
     border-bottom: none;
+}
+
+/* Ocultar botón menú en pantallas de auth */
+#app-container[data-vista="vista-splash"] #btn-menu,
+#app-container[data-vista="vista-login"] #btn-menu,
+#app-container[data-vista="vista-registro"] #btn-menu,
+#app-container[data-vista="vista-perfil-creado"] #btn-menu,
+#app-container[data-vista="vista-recuperar-password"] #btn-menu,
+#app-container[data-vista="vista-correo-enviado"] #btn-menu,
+#app-container[data-vista="vista-nueva-password"] #btn-menu,
+#app-container[data-vista="vista-password-actualizada"] #btn-menu {
+    visibility: hidden;
 }
 
 /* Título centrado en el header — oculto por defecto, visible solo en inventario */
@@ -1019,6 +1108,156 @@ body {
 
 #vista-form-producto .btn-submit {
     margin-top: auto;
+}
+
+/* ==========================================
+   AUTENTICACIÓN SIMULADA
+   ========================================== */
+
+/* Splash */
+#vista-splash {
+    padding: 36px 20px clamp(48px, 8dvh, 80px);
+    gap: 20px;
+}
+
+.auth-logo { text-align: center; }
+
+.splash-bienvenida { text-align: center; }
+
+.splash-titulo {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--negro-texto);
+    margin-bottom: 6px;
+}
+
+.splash-desc {
+    font-size: 13px;
+    color: var(--gris);
+    line-height: 1.5;
+}
+
+.splash-acciones {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: auto;
+}
+
+/* Vistas de formulario de auth */
+#vista-login,
+#vista-registro,
+#vista-recuperar-password,
+#vista-nueva-password {
+    gap: 20px;
+}
+
+/* Botón al fondo en forms de auth */
+#vista-login .form-moniarquia,
+#vista-registro .form-moniarquia,
+#vista-recuperar-password .form-moniarquia,
+#vista-nueva-password .form-moniarquia { flex: 1; }
+
+#vista-login .btn-submit,
+#vista-registro .btn-submit,
+#vista-recuperar-password .btn-submit,
+#vista-nueva-password .btn-submit { margin-top: auto; }
+
+/* Pantallas de éxito de auth */
+#vista-perfil-creado,
+#vista-correo-enviado,
+#vista-password-actualizada {
+    padding: clamp(16px, 4dvh, 28px) 20px clamp(20px, 4dvh, 36px);
+    gap: clamp(14px, 3dvh, 24px);
+    justify-content: center;
+}
+
+/* Ícono de usuario en círculo (login / registro / recuperar) */
+.auth-icon-wrap {
+    width: 72px;
+    height: 72px;
+    background-color: var(--rosa-viejo);
+    border-radius: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    align-self: center;
+    flex-shrink: 0;
+}
+
+/* <i data-lucide="user-round"> → <svg class="auth-icon"> */
+.auth-icon {
+    width: 36px;
+    height: 36px;
+    stroke: var(--blanco);
+}
+
+.auth-header { text-align: center; }
+
+.auth-titulo {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--negro-texto);
+    margin-bottom: 4px;
+}
+
+.auth-subtitulo {
+    font-size: 13px;
+    color: var(--gris);
+}
+
+/* Input con ícono integrado */
+.auth-input-wrap {
+    display: flex;
+    align-items: center;
+    background-color: var(--blanco);
+    border: 1px solid var(--negro-pleno);
+    border-radius: 10px;
+    padding: 14px;
+    gap: 10px;
+    box-shadow: inset 0 2px 2px rgba(0,0,0,0.05);
+}
+
+.auth-input-wrap:focus-within { border: 2px solid var(--rojo-moniarquia); }
+
+/* <i data-lucide="mail"> → <svg class="auth-input-icono"> */
+.auth-input-icono {
+    width: 18px;
+    height: 18px;
+    stroke: var(--gris);
+    flex-shrink: 0;
+}
+
+.auth-input-wrap input {
+    border: none;
+    outline: none;
+    width: 100%;
+    font-size: 14px;
+    color: var(--gris);
+    font-family: 'Inter', sans-serif;
+    background: transparent;
+}
+
+/* Credenciales de demo (visibles durante pruebas del TP) */
+.auth-demo {
+    font-size: 11px;
+    color: var(--gris);
+    line-height: 1.6;
+    margin-top: 10px;
+}
+
+.auth-demo strong {
+    font-weight: 600;
+    color: #444;
+}
+
+/* Link "¿Olvidaste tu contraseña?" */
+.auth-link {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--rojo-moniarquia);
+    cursor: pointer;
+    text-align: left;
 }
 
 /* Grid de stock por talla (S / M / L / XL) */
