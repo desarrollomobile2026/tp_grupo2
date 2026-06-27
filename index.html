@@ -593,7 +593,7 @@
                 <i data-lucide="circle-arrow-right"></i>
                 Siguiente
             </button>
-            <button class="btn-secondary-outline" onclick="navegarA('vista-seleccionar-producto')">
+            <button class="btn-secondary-outline" onclick="abrirEscaneo()">
                 <i data-lucide="scan-line"></i>
                 Escanear otro
             </button>
@@ -1016,8 +1016,11 @@
     <main id="vista-seleccionar-talle" class="vista">
         <p class="vista-desc">Seleccioná el talle disponible para el cambio</p>
         <div class="cambio-producto-card">
-            <p class="cambio-producto-nombre" id="talle-cambio-producto-nombre">-</p>
-            <p class="cambio-talle-actual">Talle actual: <strong id="talle-cambio-actual">-</strong></p>
+            <img id="talle-cambio-foto" class="cambio-prod-thumb" src="" alt="">
+            <div>
+                <p class="cambio-producto-nombre" id="talle-cambio-producto-nombre">-</p>
+                <p class="cambio-talle-actual">Talle actual: <strong id="talle-cambio-actual">-</strong></p>
+            </div>
         </div>
         <div id="talle-cambio-contenido" class="talle-cambio-chips-wrap">
             <!-- Renderizado dinámicamente -->

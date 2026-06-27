@@ -1765,9 +1765,8 @@ function seleccionarMetodoPago(metodo) {
 
     if (metodo === 'cuenta_corriente') {
         if (!clienteSeleccionado) {
-            alert('La cuenta corriente requiere un cliente asociado.\nSeleccioná un cliente primero.');
-            irASeleccionarCliente();
-            return;
+            alert('Asociá la venta a un cliente para registrar una nueva deuda.');
+            return;  // permanece en Método de pago sin redirigir
         }
         const total = carritoVenta.reduce((s, i) => s + (i.precio || 0) * (i.cantidad || 1), 0);
         const totalLabel = document.getElementById('deuda-total-label');
@@ -2376,6 +2375,8 @@ function renderizarItemsVentaCambio() {
         return;
     }
 
+    const fotoFallback = 'https://placehold.co/52x52/FFDFDF/5A5A5A?text=Sin+Foto';
+
     lista.innerHTML = items.map((item, idx) => {
         const tieneTalle  = !!(item.talla && item.talla.trim());
         const clsDis      = !tieneTalle ? 'cambio-item-disabled' : '';
@@ -2384,8 +2385,17 @@ function renderizarItemsVentaCambio() {
             item.talla  ? `Talle: ${item.talla}` : '',
             item.color  ? `Color: ${item.color}` : ''
         ].filter(Boolean).join(' · ');
+
+        // Buscar imagen del producto desde el catálogo en memoria
+        const productoData = listaPrendasGlobal.find(p => p.id === item.productoId);
+        const foto = productoData ? (obtenerFotoProducto(productoData) || '') : '';
+
         return `
         <div class="cambio-item ${clsDis}" ${onclick}>
+            <img class="cambio-item-thumb"
+                 src="${foto || fotoFallback}"
+                 alt="${item.nombre || ''}"
+                 onerror="this.src='${fotoFallback}'">
             <div class="cambio-item-info">
                 <p class="cambio-item-nombre">${item.nombre || '—'}</p>
                 ${metaLinea ? `<p class="cambio-item-meta">${metaLinea}</p>` : ''}
@@ -2408,10 +2418,20 @@ function seleccionarItemParaCambio(idx) {
     const nombreEl   = document.getElementById('talle-cambio-producto-nombre');
     const actualEl   = document.getElementById('talle-cambio-actual');
     const contenedor = document.getElementById('talle-cambio-contenido');
+    const fotoEl     = document.getElementById('talle-cambio-foto');
 
     if (nombreEl)   nombreEl.textContent   = item.nombre || '—';
     if (actualEl)   actualEl.textContent   = item.talla;
     if (contenedor) contenedor.innerHTML   = '<p class="cargando" style="text-align:center;padding:16px 0;">Cargando talles disponibles...</p>';
+
+    // Imagen del producto desde el catálogo en memoria
+    if (fotoEl) {
+        const prodData = listaPrendasGlobal.find(p => p.id === item.productoId);
+        const foto     = prodData ? (obtenerFotoProducto(prodData) || '') : '';
+        fotoEl.src = foto || 'https://placehold.co/52x52/FFDFDF/5A5A5A?text=Sin+Foto';
+        fotoEl.alt = item.nombre || '';
+        fotoEl.onerror = () => { fotoEl.src = 'https://placehold.co/52x52/FFDFDF/5A5A5A?text=Sin+Foto'; };
+    }
 
     navegarA('vista-seleccionar-talle');
 
