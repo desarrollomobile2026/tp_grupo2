@@ -55,15 +55,24 @@ No hacer:
 
 ## 5. Etapas del plan de implementación
 
-| Etapa | Módulo | Funcionalidades |
+| Etapa | Módulo | Estado |
 |---|---|---|
-| 1 | Home + navegación | Home operativo, menú hamburguesa, navegación básica |
-| 2 | Inventario | Listado, búsqueda, alta, edición, eliminación |
-| 3 | Flujo de venta | Selección de producto, carrito, confirmar compra, asociar cliente, método de pago (sin registrar) |
-| 4 | Clientes y ventas | Listado de clientes, alta, métodos de pago, registro de ventas en Firebase |
-| 5 | Cuenta corriente | Detalle de cliente, historial, pagos completos, pagos parciales |
-| 6 | Cambios y devoluciones | Búsqueda de venta, cambio de talle, actualización de stock |
-| 7 | Autenticación | Splash, login, registro, protección de rutas, cierre de sesión |
+| 1 | Home + navegación | ✅ Completo — historial de navegación incluido |
+| 2 | Inventario | ✅ Completo — talles dinámicos por categoría (S/M/L/XL vs 36–44) |
+| 3 | Flujo de venta | ✅ Completo — cámara simulada, carrito, pagos conectados a Firestore |
+| 4 | Clientes y ventas | ✅ Completo — Efectivo, Mercado Pago, Cuenta corriente con stock |
+| 5 | Cuenta corriente | ✅ Completo — detalle de cliente, movimientos, pagos parciales |
+| 6 | Cambios y devoluciones | ✅ Parcial — solo cambio de talle; cambio por otro producto pendiente |
+| 7 | Autenticación | ❌ Revertido — implementado pero desactivado por falta de Firebase Auth habilitado |
+
+### Próximos módulos
+
+| Módulo | Prioridad |
+|---|---|
+| Autenticación (splash, login, registro) | Alta — pilar del TP |
+| Diagramas UML (actividad + secuencia, 3+ CU) | Alta — pilar del TP |
+| Prototipo Figma (coherencia visual) | Alta — pilar del TP |
+| Configuración de usuarios | Baja |
 
 ---
 

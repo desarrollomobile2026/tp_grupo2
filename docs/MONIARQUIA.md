@@ -271,40 +271,45 @@ config.js    ← credenciales Firebase (completar con las del grupo)
 README.md
 ```
 
-### Funcionalidades ya implementadas
-- SPA con vistas: inicio, productos, favoritos, carrito
-- Catálogo desde Firestore en tiempo real (`onSnapshot`)
-- Búsqueda por nombre
-- Sistema de likes / destacados
-- Carrito con localStorage
-- Alta y baja de productos en Firestore
-- Modal de detalle de producto
+### Funcionalidades implementadas (estado actual — Junio 2026)
 
-### Qué pide realmente la consigna
+| Módulo | Estado |
+|---|---|
+| Home + menú hamburguesa + navegación con historial | ✅ |
+| Inventario (CRUD, búsqueda, filtros, talles dinámicos por categoría) | ✅ |
+| Escaneo simulado (cámara con getUserMedia) → flujo manual | ✅ |
+| Flujo de venta completo (selección → carrito → pagos) | ✅ |
+| Clientes (lista, alta, buscador, selección en venta) | ✅ |
+| Registro de ventas en Firestore (Efectivo, Mercado Pago, Cuenta corriente) | ✅ |
+| Cuenta corriente (detalle, movimientos, historial, pagos) | ✅ |
+| Cambios y devoluciones (cambio de talle, actualización stock) | ✅ parcial |
+| Autenticación (splash, login, registro, onAuthStateChanged) | ❌ revertido |
+| Configuración de usuarios | ❌ no implementado |
 
-> "esta actividad se enfoca en la **adaptación del diseño y del contenido** del proyecto, no en una complejidad técnica adicional."
+### Colecciones Firebase activas
 
-No hay que reescribir un sistema de gestión. Hay que adaptar el código base a la identidad de Moniarquía.
+- `/productos` — onSnapshot en tiempo real
+- `/clientes` — onSnapshot en tiempo real
+- `/ventas` — lectura y escritura
+- `/cuentaCorriente` — lectura y escritura
+- `/cambios` — solo escritura
+- `/usuarios` — no activa (auth revertida)
 
-### Plan de adaptación
+### Firebase Storage
 
-| Tarea | Complejidad | Prioridad |
-|---|---|---|
-| Aplicar Design System en `style.css` (colores + Inter) | Baja | Alta |
-| Branding: título "Moniarquía", colores | Baja | Alta |
-| Adaptar categorías a indumentaria en `index.html` | Baja | Alta |
-| Completar `config.js` con Firebase del grupo | Baja | Alta |
-| Cargar productos de ejemplo en Firestore | Baja | Alta |
-| Coherencia visual con Figma (cards, botones, nav) | Media | Alta |
-| Pantalla de Login con Firebase Auth | Media | Media |
-| Pantalla de Registro | Media | Media |
+- `storageBucket` configurado en `config.js` pero SDK no cargado.
+- La carga de imágenes desde dispositivo fue revertida.
+- Las imágenes se manejan via `foto_url` (URL manual) o mapeo local por nombre en `obtenerFotoProducto()`.
 
-### Lo que NO es necesario para el TP
-- Cuenta corriente funcional
-- Módulo de cambios y devoluciones
-- Gestión de roles con reglas Firestore
-- Integración real con Mercado Pago
-- Escáner de código de barras
+### Pendiente para la entrega
+
+1. **Autenticación** — splash, login, registro (uno de los 3 pilares del TP)
+2. **Diagramas UML** — actividad y secuencia para al menos 3 casos de uso
+3. **Prototipo Figma** — revisar coherencia visual con lo implementado
+
+### Nota sobre campo de imagen en productos
+
+El modelo de datos define `imagen: string (Storage URL)` pero el código usa `foto_url`. Ambos se leen como fallback en `obtenerFotoProducto()`. Para nuevos productos creados en la app, el campo guardado es `foto_url`.
 
 ---
 

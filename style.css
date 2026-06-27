@@ -27,7 +27,8 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
+    height: 100vh;   /* fallback navegadores antiguos */
+    height: 100dvh;  /* dynamic viewport height: excluye chrome del browser en móvil */
     overflow: hidden;
 }
 
@@ -42,6 +43,7 @@ body {
     flex-direction: column;
     box-shadow: 0 0 35px rgba(0,0,0,0.8);
     overflow: hidden;
+    min-height: 0; /* permite que flex item se contraiga correctamente */
 }
 
 /* ==========================================
@@ -552,7 +554,7 @@ body {
 
 /* Vista Home */
 #vista-home {
-    padding: 68px 20px 120px;
+    padding: 68px 20px clamp(60px, 12dvh, 120px);
 }
 
 .home-logo {
@@ -1183,8 +1185,8 @@ body {
 #vista-cliente-agregado,
 #vista-pago-registrado,
 #vista-deuda-registrada {
-    padding: 28px 20px 36px;
-    gap: 24px;
+    padding: clamp(16px, 4dvh, 28px) 20px clamp(20px, 4dvh, 36px);
+    gap: clamp(14px, 3dvh, 24px);
 }
 
 .exito-logo { text-align: center; }
@@ -1523,6 +1525,29 @@ body {
 }
 
 /* ==========================================
+   RESPONSIVIDAD — PANTALLAS CORTAS (≤ 640px)
+   Solo ajusta tamaño del logo en teléfonos muy pequeños.
+   No afecta colores, botones ni estructura visual en teléfonos normales.
+   ========================================== */
+@media (max-height: 640px) {
+    .exito-logo .logo-text,
+    .asociar-logo .logo-text,
+    .auth-logo .logo-text,
+    .home-logo .logo-text {
+        font-size: 48px;
+    }
+    .exito-logo .sub-logo,
+    .asociar-logo .sub-logo,
+    .auth-logo .sub-logo,
+    .home-logo .sub-logo {
+        margin-top: 8px;
+    }
+    .home-deco { margin-top: 4px; }
+    #vista-perfil-creado { padding: clamp(16px, 3dvh, 28px) 20px clamp(20px, 4dvh, 36px); gap: clamp(12px, 2.5dvh, 24px); }
+    #vista-pago-cliente-ok { padding: clamp(16px, 3dvh, 28px) 20px clamp(20px, 4dvh, 36px); gap: clamp(12px, 2.5dvh, 24px); }
+}
+
+/* ==========================================
    ETAPA 7: CAMBIOS Y DEVOLUCIONES
    ========================================== */
 
@@ -1530,7 +1555,7 @@ body {
 
 #vista-cambios              { gap: 16px; }
 #vista-confirmar-cambio     { gap: 20px; }
-#vista-cambio-realizado     { padding: 28px 20px 36px; gap: 24px; }
+#vista-cambio-realizado     { padding: clamp(16px, 3dvh, 28px) 20px clamp(20px, 4dvh, 36px); gap: clamp(14px, 3dvh, 24px); }
 
 /* Sección superior con ícono y descripción */
 .cambios-entrada {
@@ -1769,8 +1794,8 @@ body {
     position: relative;
     width: 100%;
     flex: 1;
-    min-height: 240px;
-    max-height: 380px;
+    min-height: clamp(180px, 35dvh, 240px);
+    max-height: clamp(240px, 50dvh, 380px);
     background-color: #111;
     border-radius: 16px;
     overflow: hidden;
@@ -2271,8 +2296,8 @@ body {
    ¿DESEA ASOCIAR CLIENTE?
    ------------------------------------------ */
 #vista-asociar-cliente {
-    padding: 28px 20px 36px;
-    gap: 24px;
+    padding: clamp(16px, 3dvh, 28px) 20px clamp(20px, 4dvh, 36px);
+    gap: clamp(14px, 3dvh, 24px);
 }
 
 .asociar-logo { text-align: center; }
@@ -2471,7 +2496,7 @@ body {
 }
 
 #vista-metodo-pago .pago-metodos {
-    margin-bottom: 48px;
+    margin-bottom: clamp(16px, 5dvh, 48px);
 }
 
 .pago-metodo-item {
