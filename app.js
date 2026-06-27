@@ -511,6 +511,7 @@ function abrirFormProducto(id) {
         document.getElementById('inv-precio').value    = p.precio    || '';
         document.getElementById('inv-categoria').value = p.categoria || '';
         document.getElementById('inv-color').value     = color;
+        document.getElementById('inv-desc').value      = p.descripcion || '';
         document.getElementById('inv-foto').value      = p.foto_url || p.imagen || '';
         renderizarStockGrid(p.categoria, stockPorTalla);
     } else {
@@ -528,8 +529,9 @@ function guardarProducto(e) {
     const nombre    = (document.getElementById('inv-nombre')?.value    || '').trim();
     const precio    = parseFloat(document.getElementById('inv-precio')?.value);
     const categoria = document.getElementById('inv-categoria')?.value  || '';
-    const colorRaw  = (document.getElementById('inv-color')?.value     || '').trim();
-    const foto      = (document.getElementById('inv-foto')?.value      || '').trim();
+    const colorRaw     = (document.getElementById('inv-color')?.value     || '').trim();
+    const descripcion  = (document.getElementById('inv-desc')?.value      || '').trim();
+    const foto         = (document.getElementById('inv-foto')?.value      || '').trim();
 
     if (!nombre || isNaN(precio) || !categoria) {
         alert('Completá los campos obligatorios: nombre, precio y categoría.');
@@ -549,7 +551,7 @@ function guardarProducto(e) {
     const tallas = tallesCat.filter(t => stockPorTalla[t] > 0);
     const stock  = tallesCat.reduce((s, t) => s + stockPorTalla[t], 0);
 
-    const datos = { nombre, precio, categoria, colores, foto_url: foto, stockPorTalla, tallas, stock };
+    const datos = { nombre, precio, categoria, colores, descripcion, foto_url: foto, stockPorTalla, tallas, stock };
 
     const btn = document.getElementById('btn-guardar-producto');
     if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
