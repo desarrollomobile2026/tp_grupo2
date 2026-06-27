@@ -100,7 +100,7 @@
         <div class="inv-header">
             <p class="vista-desc inv-subtitulo">Consultá y gestioná el stock disponible</p>
             <div class="inv-header-acciones">
-                <button class="btn-escanear" onclick="mostrarProximamente('Escaneo de código de barras')" title="Escanear producto">
+                <button class="btn-escanear" onclick="abrirEscaneo()" title="Escanear producto">
                     <i data-lucide="scan-line"></i>
                 </button>
                 <button class="btn-agregar" onclick="abrirFormProducto(null)" title="Agregar producto">
@@ -181,6 +181,11 @@
             <div class="input-group">
                 <label>Color</label>
                 <input type="text" id="inv-color" placeholder="Ej: Verde, Terracota">
+            </div>
+
+            <div class="input-group">
+                <label>Descripción</label>
+                <textarea id="inv-desc" rows="2" placeholder="Ej: Manga larga, suave y frizada."></textarea>
             </div>
 
             <div class="input-group">
