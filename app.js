@@ -12,7 +12,8 @@ let terminoBuscado = "";
 let filtroInvCategoria = "Todos";
 let terminoInvBusqueda = "";
 let productoEditandoId = null;
-let productoAEliminar = null;
+let productoAEliminar  = null;
+let productoStockId    = null; // producto activo en #vista-gestionar-stock
 
 // ── SESIÓN SIMULADA (TODO: reemplazar por Firebase Authentication) ──────────
 const SESSION_KEY = 'moniarquia_session';
@@ -24,6 +25,24 @@ const USUARIOS_MOCK = [
 ];
 
 let sesionActual = null; // { nombre, correo, rol } — NO se guarda la contraseña
+
+// ── HELPERS DE PERMISOS ──────────────────────────────────────────────────────
+function esAdmin() {
+    return (sesionActual?.rol || '') === 'administrador';
+}
+
+function aplicarRolUI() {
+    const contenedor = document.getElementById('app-container');
+    if (contenedor) contenedor.setAttribute('data-rol', sesionActual?.rol || 'empleado');
+}
+
+function verificarPermisoAccion(accion) {
+    if (!esAdmin()) {
+        alert(`No tenés permisos para realizar esta acción.\n(${accion})`);
+        return false;
+    }
+    return true;
+}
 
 // Stack de navegación (Back button)
 let historialNavegacion = [];
@@ -838,14 +857,19 @@ function renderizarInventario() {
             <div class="inv-info">
                 <div class="inv-fila-top">
                     <h3 class="inv-nombre">${p.nombre}</h3>
-                    <div class="inv-acciones">
-                        <button class="inv-btn-accion" onclick="abrirFormProducto('${p.id}')" title="Editar">
-                            <i data-lucide="pencil"></i>
-                        </button>
-                        <button class="inv-btn-accion inv-btn-eliminar" onclick="confirmarEliminar('${p.id}')" title="Eliminar">
-                            <i data-lucide="trash-2"></i>
-                        </button>
-                    </div>
+                    ${esAdmin()
+                        ? `<div class="inv-acciones">
+                               <button class="inv-btn-accion" onclick="abrirFormProducto('${p.id}')" title="Editar">
+                                   <i data-lucide="pencil"></i>
+                               </button>
+                               <button class="inv-btn-accion inv-btn-eliminar" onclick="confirmarEliminar('${p.id}')" title="Eliminar">
+                                   <i data-lucide="trash-2"></i>
+                               </button>
+                           </div>`
+                        : `<button class="inv-btn-accion inv-btn-stock" onclick="abrirGestionarStock('${p.id}')" title="Gestionar stock">
+                               <i data-lucide="package-plus"></i>
+                           </button>`
+                    }
                 </div>
                 ${meta ? `<p class="inv-meta">${meta}</p>` : ''}
                 ${descHTML}
@@ -868,6 +892,90 @@ function filtrarInv(cat) {
     renderizarInventario();
 }
 
+// ── SELECTOR DE COLORES ───────────────────────────────────────────────────────
+
+function inicializarColorSelector(coloresExistentes) {
+    // flatMap maneja tanto arrays de strings como un string con comas (formato viejo de Firestore)
+    // filter final descarta valores que no están en COLORES_PREDEFINIDOS (colores viejos o inválidos)
+    coloresSeleccionados = (coloresExistentes || [])
+        .flatMap(c => typeof c === 'string' ? c.split(',').map(s => s.trim().toLowerCase()) : [])
+        .filter(v => v && COLORES_PREDEFINIDOS.some(p => p.valor === v));
+
+    const panel = document.getElementById('color-selector-panel');
+    if (!panel) return;
+
+    panel.innerHTML = COLORES_PREDEFINIDOS.map(c => {
+        const sel = coloresSeleccionados.includes(c.valor);
+        return `
+        <div class="color-option" onclick="toggleColor('${c.valor}')">
+            <span class="color-swatch" style="background:${c.hex};"></span>
+            <span class="color-nombre">${c.nombre}</span>
+            <span class="color-check ${sel ? 'seleccionado' : ''}" id="check-${c.valor}">${sel ? '✓' : ''}</span>
+        </div>`;
+    }).join('');
+
+    // Cerrar panel y resetear trigger
+    panel.classList.remove('abierto');
+    const trigger = document.getElementById('color-selector-trigger');
+    if (trigger) trigger.classList.remove('abierto');
+
+    actualizarEtiquetaColores();
+}
+
+function toggleColorSelector() {
+    const panel   = document.getElementById('color-selector-panel');
+    const trigger = document.getElementById('color-selector-trigger');
+    if (!panel || !trigger) return;
+    const abierto = panel.classList.toggle('abierto');
+    trigger.classList.toggle('abierto', abierto);
+}
+
+function toggleColor(valor) {
+    const idx = coloresSeleccionados.indexOf(valor);
+    if (idx === -1) { coloresSeleccionados.push(valor); }
+    else            { coloresSeleccionados.splice(idx, 1); }
+
+    const checkEl = document.getElementById(`check-${valor}`);
+    if (checkEl) {
+        const sel = coloresSeleccionados.includes(valor);
+        checkEl.className   = `color-check ${sel ? 'seleccionado' : ''}`;
+        checkEl.textContent = sel ? '✓' : '';
+    }
+    actualizarEtiquetaColores();
+}
+
+function actualizarEtiquetaColores() {
+    const labelEl = document.getElementById('color-selector-label');
+    if (!labelEl) return;
+    if (coloresSeleccionados.length === 0) {
+        labelEl.textContent = 'Seleccioná colores';
+        labelEl.style.color = 'var(--gris)';
+        return;
+    }
+    if (coloresSeleccionados.length <= 3) {
+        const nombres = coloresSeleccionados.map(v => {
+            const c = COLORES_PREDEFINIDOS.find(p => p.valor === v);
+            return c ? c.nombre : v;
+        });
+        labelEl.textContent = nombres.join(', ');
+    } else {
+        labelEl.textContent = `${coloresSeleccionados.length} colores seleccionados`;
+    }
+    labelEl.style.color = 'var(--negro-texto)';
+}
+
+// Cerrar selector al tocar fuera de él
+document.addEventListener('click', (e) => {
+    const selector = document.getElementById('color-selector');
+    const panel    = document.getElementById('color-selector-panel');
+    const trigger  = document.getElementById('color-selector-trigger');
+    if (!selector || !panel || !panel.classList.contains('abierto')) return;
+    if (!selector.contains(e.target)) {
+        panel.classList.remove('abierto');
+        trigger?.classList.remove('abierto');
+    }
+}, true);
+
 function renderizarStockGrid(categoria, stockActual) {
     const contenedor = document.getElementById('inv-stock-grid');
     if (!contenedor) return;
@@ -883,6 +991,7 @@ function renderizarStockGrid(categoria, stockActual) {
 }
 
 function abrirFormProducto(id) {
+    if (!verificarPermisoAccion('crear/editar producto')) return;
     productoEditandoId = id;
     const titulo     = document.getElementById('form-titulo');          // eliminado del HTML, puede ser null
     const headerSpan = document.getElementById('header-titulo-form-producto');
@@ -893,18 +1002,19 @@ function abrirFormProducto(id) {
         if (titulo)     titulo.textContent     = 'Editar producto';
         if (headerSpan) headerSpan.textContent = 'Editar producto';
         const stockPorTalla = p.stockPorTalla || {};
-        const color = Array.isArray(p.colores) ? p.colores.join(', ') : (p.colores || '');
+        const coloresExist  = Array.isArray(p.colores) ? p.colores : (p.colores ? [p.colores] : []);
         document.getElementById('inv-nombre').value    = p.nombre    || '';
         document.getElementById('inv-precio').value    = p.precio    || '';
         document.getElementById('inv-categoria').value = p.categoria || '';
-        document.getElementById('inv-color').value     = color;
         document.getElementById('inv-desc').value      = p.descripcion || '';
         document.getElementById('inv-foto').value      = p.foto_url || p.imagen || '';
+        inicializarColorSelector(coloresExist);
         renderizarStockGrid(p.categoria, stockPorTalla);
     } else {
         if (titulo)     titulo.textContent     = 'Agregar producto';
         if (headerSpan) headerSpan.textContent = 'Agregar producto';
         document.getElementById('form-inventario-producto').reset();
+        inicializarColorSelector([]);
         renderizarStockGrid('', {});
     }
 
@@ -917,18 +1027,14 @@ function guardarProducto(e) {
     const nombre    = (document.getElementById('inv-nombre')?.value    || '').trim();
     const precio    = parseFloat(document.getElementById('inv-precio')?.value);
     const categoria = document.getElementById('inv-categoria')?.value  || '';
-    const colorRaw     = (document.getElementById('inv-color')?.value     || '').trim();
-    const descripcion  = (document.getElementById('inv-desc')?.value      || '').trim();
-    const foto         = (document.getElementById('inv-foto')?.value      || '').trim();
+    const descripcion = (document.getElementById('inv-desc')?.value || '').trim();
+    const foto        = (document.getElementById('inv-foto')?.value  || '').trim();
+    const colores     = [...coloresSeleccionados]; // array de valores del selector
 
     if (!nombre || isNaN(precio) || !categoria) {
         alert('Completá los campos obligatorios: nombre, precio y categoría.');
         return;
     }
-
-    const colores = colorRaw
-        ? colorRaw.split(',').map(c => c.trim()).filter(Boolean)
-        : [];
 
     // Leer stock desde los inputs dinámicos según la categoría del producto
     const tallesCat = TALLES_POR_CATEGORIA[categoria] || ['S', 'M', 'L', 'XL'];
@@ -961,6 +1067,7 @@ function guardarProducto(e) {
 }
 
 function confirmarEliminar(id) {
+    if (!verificarPermisoAccion('eliminar producto')) return;
     productoAEliminar = id;
     const p = listaPrendasGlobal.find(prod => prod.id === id);
     const el = document.getElementById('confirmar-nombre-producto');
@@ -984,6 +1091,66 @@ function eliminarProducto() {
         });
 }
 
+// ── GESTIÓN DE STOCK (empleados) ─────────────────────────────────────────────
+
+function abrirGestionarStock(id) {
+    const p = listaPrendasGlobal.find(prod => prod.id === id);
+    if (!p) return;
+    productoStockId = id;
+
+    // Info de solo lectura
+    const nombreEl = document.getElementById('gstock-nombre');
+    const metaEl   = document.getElementById('gstock-meta');
+    if (nombreEl) nombreEl.textContent = p.nombre || '—';
+    const metaParts = [];
+    if (p.categoria) metaParts.push(`Categoría: ${p.categoria}`);
+    const color = Array.isArray(p.colores) ? p.colores[0] : (p.colores || '');
+    if (color) metaParts.push(`Color: ${color}`);
+    if (metaEl) metaEl.textContent = metaParts.join(' · ') || '—';
+
+    // Grid de talles con valores actuales
+    const stockPorTalla = p.stockPorTalla || {};
+    const talles = TALLES_POR_CATEGORIA[p.categoria] || ['S', 'M', 'L', 'XL'];
+    const gridEl = document.getElementById('gstock-grid');
+    if (gridEl) {
+        gridEl.innerHTML = talles.map(t => `
+            <div class="inv-stock-item">
+                <span>${t}</span>
+                <input type="number" id="gstock-${t}" min="0" value="${stockPorTalla[t] ?? 0}">
+            </div>`).join('');
+    }
+
+    navegarA('vista-gestionar-stock');
+}
+
+function guardarCambioStock() {
+    if (!productoStockId) return;
+
+    const p = listaPrendasGlobal.find(prod => prod.id === productoStockId);
+    if (!p) return;
+
+    const talles = TALLES_POR_CATEGORIA[p.categoria] || ['S', 'M', 'L', 'XL'];
+    const stockPorTalla = {};
+    talles.forEach(t => {
+        stockPorTalla[t] = parseInt(document.getElementById(`gstock-${t}`)?.value) || 0;
+    });
+    const stock = talles.reduce((s, t) => s + stockPorTalla[t], 0);
+
+    const btn = document.getElementById('btn-guardar-stock');
+    if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
+
+    // Solo se actualizan los campos de stock — no nombre, precio, ni datos del producto
+    db.collection('productos').doc(productoStockId).update({ stockPorTalla, stock })
+        .then(() => {
+            productoStockId = null;
+            navegarA('vista-inventario', { silencioso: true });
+        })
+        .catch(err => alert('Error al guardar stock: ' + err.message))
+        .finally(() => {
+            if (btn) { btn.disabled = false; btn.textContent = 'Guardar cambios'; }
+        });
+}
+
 // =====================================================================
 // 8. FLUJO DE VENTA — ETAPA 3
 // =====================================================================
@@ -998,13 +1165,32 @@ const TALLES_POR_CATEGORIA = {
 };
 
 // Mapa de nombres de color → hex para los selectores de color
+// Colores predefinidos para el selector del formulario de producto
+const COLORES_PREDEFINIDOS = [
+    { nombre: 'Negro',    valor: 'negro',    hex: '#1E1E1E' },
+    { nombre: 'Blanco',   valor: 'blanco',   hex: '#F5F5F5' },
+    { nombre: 'Rojo',     valor: 'rojo',     hex: '#E53935' },
+    { nombre: 'Verde',    valor: 'verde',    hex: '#43A047' },
+    { nombre: 'Azul',     valor: 'azul',     hex: '#1E88E5' },
+    { nombre: 'Amarillo', valor: 'amarillo', hex: '#FDD835' },
+    { nombre: 'Violeta',  valor: 'violeta',  hex: '#7B1FA2' },
+    { nombre: 'Marrón',   valor: 'marron',   hex: '#6D4C41' },
+    { nombre: 'Rosa',     valor: 'rosa',     hex: '#E91E8C' },
+    { nombre: 'Naranja',  valor: 'naranja',  hex: '#FB8C00' },
+    { nombre: 'Beige',    valor: 'beige',    hex: '#D7CCC8' },
+    { nombre: 'Gris',     valor: 'gris',     hex: '#9E9E9E' },
+];
+
+let coloresSeleccionados = []; // estado del selector del formulario
+
 const COLORES_HEX = {
     negro: '#1E1E1E', blanco: '#F5F5F5', gris: '#9E9E9E',
-    rojo: '#FF6677', rosa: '#FFDFDF', verde: '#4CAF50',
-    azul: '#2196F3', amarillo: '#FFC107', naranja: '#FF9800',
+    rojo: '#FF6677', rosa: '#E91E8C', verde: '#43A047',
+    azul: '#1E88E5', amarillo: '#FDD835', naranja: '#FB8C00',
+    violeta: '#7B1FA2', marron: '#6D4C41', beige: '#D7CCC8',
     terracota: '#C1694F', bordo: '#8B0000', bordó: '#8B0000',
-    celeste: '#87CEEB', chocolate: '#7B4F2E', beige: '#F5F0E8',
-    lila: '#CE93D8', violeta: '#673AB7', turquesa: '#00BCD4',
+    celeste: '#87CEEB', chocolate: '#7B4F2E',
+    lila: '#CE93D8', turquesa: '#00BCD4',
     coral: '#FF6B6B', crema: '#FFFDD0', mostaza: '#FFDB58',
 };
 
@@ -1346,16 +1532,18 @@ function renderizarListaClientes(contenedorId, modoSeleccion) {
 
         const derechaHTML = modoSeleccion
             ? `<i data-lucide="chevron-right" class="cliente-chevron"></i>`
-            : `<div class="inv-acciones">
-                   <button class="inv-btn-accion" title="Editar"
-                       onclick="abrirEditarCliente('${c.id}'); event.stopPropagation();">
-                       <i data-lucide="pencil"></i>
-                   </button>
-                   <button class="inv-btn-accion inv-btn-eliminar" title="Eliminar"
-                       onclick="confirmarEliminarCliente('${c.id}'); event.stopPropagation();">
-                       <i data-lucide="trash-2"></i>
-                   </button>
-               </div>`;
+            : esAdmin()
+                ? `<div class="inv-acciones">
+                       <button class="inv-btn-accion" title="Editar"
+                           onclick="abrirEditarCliente('${c.id}'); event.stopPropagation();">
+                           <i data-lucide="pencil"></i>
+                       </button>
+                       <button class="inv-btn-accion inv-btn-eliminar" title="Eliminar"
+                           onclick="confirmarEliminarCliente('${c.id}'); event.stopPropagation();">
+                           <i data-lucide="trash-2"></i>
+                       </button>
+                   </div>`
+                : `<i data-lucide="chevron-right" class="cliente-chevron"></i>`;
 
         return `
         <div class="cliente-item" onclick="${clickHandler}">
@@ -1464,6 +1652,7 @@ function guardarCliente(e) {
 }
 
 function abrirEditarCliente(id) {
+    if (!verificarPermisoAccion('editar cliente')) return;
     if (!id) return;
     const c = listClientesGlobal.find(cl => cl.id === id);
     if (!c) return;
@@ -1509,6 +1698,7 @@ function guardarEdicionCliente(e) {
 }
 
 function confirmarEliminarCliente(id) {
+    if (!verificarPermisoAccion('eliminar cliente')) return;
     if (!id) return;
     const c = listClientesGlobal.find(cl => cl.id === id);
     if (!c) return;
@@ -2435,6 +2625,7 @@ function iniciarApp() {
         try {
             sesionActual  = JSON.parse(guardada);
             usuarioActual = { ...sesionActual, estado: 'activo' }; // sync Mi perfil
+            aplicarRolUI();
             historialNavegacion = [];
             actualizarAvatarHome();
             navegarA('vista-home', { silencioso: true });
@@ -2469,6 +2660,7 @@ function loginSimulado(e) {
     sesionActual  = { nombre: usuario.nombre, correo: usuario.correo, rol: usuario.rol };
     usuarioActual = { ...sesionActual, estado: 'activo' }; // sync Mi perfil
     localStorage.setItem(SESSION_KEY, JSON.stringify(sesionActual));
+    aplicarRolUI();
 
     if (btn) { btn.disabled = false; btn.textContent = 'Iniciar sesión'; }
     actualizarAvatarHome();
