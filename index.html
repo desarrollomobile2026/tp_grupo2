@@ -17,11 +17,15 @@
 </head>
 <body>
 
-<div id="app-container" data-vista="vista-home">
+<div id="app-container" data-vista="vista-splash">
 
     <header class="top-header">
         <button class="btn-nav" id="btn-volver" onclick="volverAtras()">
             <i data-lucide="chevron-left"></i>
+        </button>
+        <!-- Avatar de perfil — solo visible en vista-home -->
+        <button id="btn-perfil-home" class="btn-perfil-home" onclick="togglePerfilHome()" title="Mi perfil">
+            <span id="perfil-home-inicial">U</span>
         </button>
         <span class="header-titulo header-titulo--inventario">Inventario</span>
         <span class="header-titulo header-titulo--carrito">Carrito</span>
@@ -65,7 +69,219 @@
         </button>
     </header>
 
-    <main id="vista-home" class="vista active">
+    <!-- Tarjeta flotante del perfil (solo en Home) -->
+    <div id="perfil-home-card" class="perfil-home-card" style="display:none;">
+        <p class="phc-nombre" id="phc-nombre">Usuario</p>
+        <p class="phc-correo" id="phc-correo">-</p>
+        <span class="phc-rol" id="phc-rol">Empleado</span>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════════
+         AUTENTICACIÓN SIMULADA
+         ══════════════════════════════════════════════════════════════ -->
+
+    <!-- 1. Splash -->
+    <main id="vista-splash" class="vista active">
+        <div class="auth-logo">
+            <h1 class="logo-text">Moniarquía</h1>
+            <p class="sub-logo">INDUMENTARIA</p>
+            <div class="home-deco">
+                <span class="deco-line"></span>
+                <i data-lucide="heart" class="deco-heart"></i>
+                <span class="deco-line"></span>
+            </div>
+        </div>
+        <div class="splash-bienvenida">
+            <h2 class="splash-titulo">¡Bienvenida!</h2>
+            <p class="splash-desc">Gestioná tu stock, ventas y clientes de forma simple y rápida.</p>
+        </div>
+        <div class="splash-acciones">
+            <button class="btn-primary btn-con-icono" onclick="navegarA('vista-login')">
+                <i data-lucide="user"></i>
+                Iniciar sesión
+            </button>
+            <button class="btn-secondary-outline" onclick="navegarA('vista-registro')">
+                <i data-lucide="user-plus"></i>
+                Registrarse
+            </button>
+        </div>
+    </main>
+
+    <!-- 2. Iniciar sesión -->
+    <main id="vista-login" class="vista">
+        <div class="auth-icon-wrap">
+            <i data-lucide="user-round" class="auth-icon"></i>
+        </div>
+        <div class="auth-header">
+            <h2 class="auth-titulo">Iniciar sesión</h2>
+            <p class="auth-subtitulo">Ingresá tus datos para continuar</p>
+        </div>
+        <form class="form-moniarquia" onsubmit="loginSimulado(event)">
+            <div class="input-group">
+                <label>Correo electrónico</label>
+                <div class="auth-input-wrap">
+                    <i data-lucide="mail" class="auth-input-icono"></i>
+                    <input type="email" id="login-email" placeholder="tu@correo.com" autocomplete="email">
+                </div>
+            </div>
+            <div class="input-group">
+                <label>Contraseña</label>
+                <div class="auth-input-wrap">
+                    <i data-lucide="lock-keyhole" class="auth-input-icono"></i>
+                    <input type="password" id="login-password" placeholder="Contraseña" autocomplete="current-password">
+                </div>
+            </div>
+            <p class="auth-link" onclick="navegarA('vista-recuperar-password')">¿Olvidaste tu contraseña?</p>
+            <p class="auth-demo">
+                <strong>Demo Administradora</strong><br>
+                admin@moniarquia.com | 123456<br><br>
+                <strong>Demo Empleado</strong><br>
+                empleado@moniarquia.com | 123456
+            </p>
+            <button type="submit" class="btn-primary btn-submit" id="btn-login">Iniciar sesión</button>
+        </form>
+    </main>
+
+    <!-- 3. Registro -->
+    <main id="vista-registro" class="vista">
+        <div class="auth-icon-wrap">
+            <i data-lucide="user-round-plus" class="auth-icon"></i>
+        </div>
+        <div class="auth-header">
+            <h2 class="auth-titulo">Crear cuenta</h2>
+            <p class="auth-subtitulo">Completá el formulario para registrarte</p>
+        </div>
+        <form class="form-moniarquia" onsubmit="registroSimulado(event)">
+            <div class="input-group">
+                <label>Nombre completo</label>
+                <input type="text" id="reg-nombre" placeholder="Nombre completo" autocomplete="name">
+            </div>
+            <div class="input-group">
+                <label>Correo electrónico</label>
+                <input type="email" id="reg-correo" placeholder="tu@correo.com" autocomplete="email">
+            </div>
+            <div class="input-group">
+                <label>Contraseña</label>
+                <input type="password" id="reg-password" placeholder="Al menos 6 caracteres" autocomplete="new-password">
+            </div>
+            <div class="input-group">
+                <label>Confirmar contraseña</label>
+                <input type="password" id="reg-password2" placeholder="Repetir contraseña" autocomplete="new-password">
+            </div>
+            <button type="submit" class="btn-primary btn-submit" id="btn-registro">Crear cuenta</button>
+        </form>
+    </main>
+
+    <!-- 4. Perfil creado -->
+    <main id="vista-perfil-creado" class="vista">
+        <div class="auth-logo">
+            <h1 class="logo-text">Moniarquía</h1>
+            <p class="sub-logo">INDUMENTARIA</p>
+            <div class="home-deco">
+                <span class="deco-line"></span>
+                <i data-lucide="heart" class="deco-heart"></i>
+                <span class="deco-line"></span>
+            </div>
+        </div>
+        <div class="exito-card">
+            <div class="exito-icono-verde"><i data-lucide="check" class="exito-check"></i></div>
+            <h2 class="exito-titulo">¡Perfil creado!</h2>
+            <p class="exito-desc">Tu perfil fue creado correctamente.</p>
+        </div>
+        <div class="exito-acciones">
+            <button class="btn-primary" onclick="navegarA('vista-login', { silencioso: true })">Iniciar sesión</button>
+            <button class="btn-outline" onclick="navegarA('vista-splash', { silencioso: true })">Volver al inicio</button>
+        </div>
+    </main>
+
+    <!-- 5. Recuperar contraseña -->
+    <main id="vista-recuperar-password" class="vista">
+        <div class="auth-icon-wrap">
+            <i data-lucide="mail" class="auth-icon"></i>
+        </div>
+        <div class="auth-header">
+            <h2 class="auth-titulo">Recuperar contraseña</h2>
+            <p class="auth-subtitulo">Ingresá tu correo para recibir instrucciones</p>
+        </div>
+        <form class="form-moniarquia" onsubmit="recuperarPasswordSimulado(event)">
+            <div class="input-group">
+                <label>Correo electrónico</label>
+                <div class="auth-input-wrap">
+                    <i data-lucide="mail" class="auth-input-icono"></i>
+                    <input type="email" id="recuperar-correo" placeholder="tu@correo.com" autocomplete="email">
+                </div>
+            </div>
+            <button type="submit" class="btn-primary btn-submit" id="btn-recuperar">Enviar correo</button>
+        </form>
+    </main>
+
+    <!-- 6. Correo enviado -->
+    <main id="vista-correo-enviado" class="vista">
+        <div class="auth-logo">
+            <h1 class="logo-text">Moniarquía</h1>
+            <p class="sub-logo">INDUMENTARIA</p>
+            <div class="home-deco">
+                <span class="deco-line"></span>
+                <i data-lucide="heart" class="deco-heart"></i>
+                <span class="deco-line"></span>
+            </div>
+        </div>
+        <div class="exito-card">
+            <div class="exito-icono-verde"><i data-lucide="mail" class="exito-check"></i></div>
+            <h2 class="exito-titulo">Correo enviado</h2>
+            <p class="exito-desc">Te enviamos un correo para restablecer tu contraseña.</p>
+        </div>
+        <div class="exito-acciones">
+            <button class="btn-primary" onclick="navegarA('vista-nueva-password', { silencioso: true })">Crear nueva contraseña</button>
+            <button class="btn-outline" onclick="navegarA('vista-login', { silencioso: true })">Volver al inicio de sesión</button>
+        </div>
+    </main>
+
+    <!-- 7. Nueva contraseña -->
+    <main id="vista-nueva-password" class="vista">
+        <div class="auth-icon-wrap">
+            <i data-lucide="lock-keyhole" class="auth-icon"></i>
+        </div>
+        <div class="auth-header">
+            <h2 class="auth-titulo">Nueva contraseña</h2>
+            <p class="auth-subtitulo">Ingresá tu nueva contraseña</p>
+        </div>
+        <form class="form-moniarquia" onsubmit="guardarNuevaPasswordSimulada(event)">
+            <div class="input-group">
+                <label>Nueva contraseña</label>
+                <input type="password" id="nueva-pwd" placeholder="Al menos 6 caracteres" autocomplete="new-password">
+            </div>
+            <div class="input-group">
+                <label>Confirmar contraseña</label>
+                <input type="password" id="nueva-pwd2" placeholder="Repetir contraseña" autocomplete="new-password">
+            </div>
+            <button type="submit" class="btn-primary btn-submit" id="btn-guardar-nueva-pwd">Guardar contraseña</button>
+        </form>
+    </main>
+
+    <!-- 8. Contraseña actualizada -->
+    <main id="vista-password-actualizada" class="vista">
+        <div class="auth-logo">
+            <h1 class="logo-text">Moniarquía</h1>
+            <p class="sub-logo">INDUMENTARIA</p>
+            <div class="home-deco">
+                <span class="deco-line"></span>
+                <i data-lucide="heart" class="deco-heart"></i>
+                <span class="deco-line"></span>
+            </div>
+        </div>
+        <div class="exito-card">
+            <div class="exito-icono-verde"><i data-lucide="check" class="exito-check"></i></div>
+            <h2 class="exito-titulo">Contraseña actualizada</h2>
+            <p class="exito-desc">Tu contraseña fue actualizada correctamente.</p>
+        </div>
+        <div class="exito-acciones">
+            <button class="btn-primary" onclick="navegarA('vista-login', { silencioso: true })">Iniciar sesión</button>
+            <button class="btn-outline" onclick="navegarA('vista-splash', { silencioso: true })">Volver al inicio</button>
+        </div>
+    </main>
+
+    <main id="vista-home" class="vista">
         <div class="home-logo">
             <h1 class="logo-text">Moniarquía</h1>
             <p class="sub-logo">INDUMENTARIA</p>

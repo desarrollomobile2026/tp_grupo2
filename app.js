@@ -14,6 +14,17 @@ let terminoInvBusqueda = "";
 let productoEditandoId = null;
 let productoAEliminar = null;
 
+// ── SESIÓN SIMULADA (TODO: reemplazar por Firebase Authentication) ──────────
+const SESSION_KEY = 'moniarquia_session';
+
+// Usuarios mock — TODO: reemplazar por firebase.auth().signInWithEmailAndPassword()
+const USUARIOS_MOCK = [
+    { nombre: 'Admin Principal', correo: 'admin@moniarquia.com',    password: '123456', rol: 'administrador' },
+    { nombre: 'Empleado',        correo: 'empleado@moniarquia.com', password: '123456', rol: 'empleado'       },
+];
+
+let sesionActual = null; // { nombre, correo, rol } — NO se guarda la contraseña
+
 // Stack de navegación (Back button)
 let historialNavegacion = [];
 
@@ -64,6 +75,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof lucide !== 'undefined') lucide.createIcons();
     const btnVolver = document.getElementById('btn-volver');
     if (btnVolver) btnVolver.style.visibility = 'hidden';
+
+    // Iniciar app: verificar sesión guardada
+    iniciarApp();
 
     actualizarBadgeCarrito();
     renderizarCarrito();
@@ -364,7 +378,11 @@ function navegarA(vistaId, opciones) {
     }
     const btnVolver = document.getElementById('btn-volver');
     if (btnVolver) {
-        btnVolver.style.visibility = (vistaId === 'vista-home') ? 'hidden' : 'visible';
+        const sinVolver = [
+            'vista-home', 'vista-splash',
+            'vista-perfil-creado', 'vista-correo-enviado', 'vista-password-actualizada'
+        ];
+        btnVolver.style.visibility = sinVolver.includes(vistaId) ? 'hidden' : 'visible';
     }
     document.getElementById('app-container')?.setAttribute('data-vista', vistaId);
 }
@@ -494,6 +512,10 @@ function guardarCambioPassword(e) {
 // ── FUNCIONES DE GESTIÓN DE USUARIOS ─────────────────────────────────────────
 
 function irAGestionUsuarios() {
+    if (sesionActual && sesionActual.rol !== 'administrador') {
+        alert('No tenés permisos para acceder a esta sección.');
+        return;
+    }
     renderizarUsuarios();
     navegarA('vista-gestion-usuarios');
 }
@@ -732,8 +754,12 @@ function cerrarSesionLocal() {
     }
     historialNavegacion = [];
 
-    // Navegar al inicio
-    navegarA('vista-home', { silencioso: true });
+    // Limpiar sesión simulada
+    // TODO: reemplazar por firebase.auth().signOut()
+    sesionActual = null;
+    localStorage.removeItem(SESSION_KEY);
+
+    navegarA('vista-splash', { silencioso: true });
 }
 
 // =====================================================================
@@ -2396,3 +2422,140 @@ function reiniciarCambios() {
     navegarA('vista-cambios', { silencioso: true });
     cargarVentasParaCambios();
 }
+
+// =====================================================================
+// AUTENTICACIÓN SIMULADA
+// TODO: cada función tiene su equivalente de Firebase Auth comentado
+// =====================================================================
+
+function iniciarApp() {
+    // TODO: reemplazar por firebase.auth().onAuthStateChanged()
+    const guardada = localStorage.getItem(SESSION_KEY);
+    if (guardada) {
+        try {
+            sesionActual  = JSON.parse(guardada);
+            usuarioActual = { ...sesionActual, estado: 'activo' }; // sync Mi perfil
+            historialNavegacion = [];
+            actualizarAvatarHome();
+            navegarA('vista-home', { silencioso: true });
+        } catch {
+            localStorage.removeItem(SESSION_KEY);
+            navegarA('vista-splash', { silencioso: true });
+        }
+    } else {
+        navegarA('vista-splash', { silencioso: true });
+    }
+}
+
+function loginSimulado(e) {
+    e.preventDefault();
+    const correo   = (document.getElementById('login-email')?.value    || '').trim().toLowerCase();
+    const password =  document.getElementById('login-password')?.value || '';
+
+    if (!correo || !password) { alert('Completá todos los campos.'); return; }
+
+    const btn = document.getElementById('btn-login');
+    if (btn) { btn.disabled = true; btn.textContent = 'Ingresando...'; }
+
+    // TODO: reemplazar por firebase.auth().signInWithEmailAndPassword(correo, password)
+    const usuario = USUARIOS_MOCK.find(u => u.correo === correo && u.password === password);
+
+    if (!usuario) {
+        alert('Usuario o contraseña incorrectos.');
+        if (btn) { btn.disabled = false; btn.textContent = 'Iniciar sesión'; }
+        return;
+    }
+
+    sesionActual  = { nombre: usuario.nombre, correo: usuario.correo, rol: usuario.rol };
+    usuarioActual = { ...sesionActual, estado: 'activo' }; // sync Mi perfil
+    localStorage.setItem(SESSION_KEY, JSON.stringify(sesionActual));
+
+    if (btn) { btn.disabled = false; btn.textContent = 'Iniciar sesión'; }
+    actualizarAvatarHome();
+    historialNavegacion = [];
+    navegarA('vista-home', { silencioso: true });
+}
+
+function registroSimulado(e) {
+    e.preventDefault();
+    const nombre    = (document.getElementById('reg-nombre')?.value     || '').trim();
+    const correo    = (document.getElementById('reg-correo')?.value     || '').trim();
+    const password  =  document.getElementById('reg-password')?.value  || '';
+    const password2 =  document.getElementById('reg-password2')?.value || '';
+
+    if (!nombre || !correo || !password || !password2) { alert('Completá todos los campos.'); return; }
+    if (password.length < 6) { alert('La contraseña debe tener al menos 6 caracteres.'); return; }
+    if (password !== password2) { alert('Las contraseñas no coinciden.'); return; }
+
+    // TODO: reemplazar por firebase.auth().createUserWithEmailAndPassword(correo, password)
+    //       y luego db.collection('usuarios').doc(uid).set({ nombre, correo, rol: 'empleado', estado: 'activo', createdAt })
+    navegarA('vista-perfil-creado', { silencioso: true });
+}
+
+function recuperarPasswordSimulado(e) {
+    e.preventDefault();
+    const correo = (document.getElementById('recuperar-correo')?.value || '').trim();
+    if (!correo) { alert('Ingresá tu correo electrónico.'); return; }
+
+    // TODO: reemplazar por firebase.auth().sendPasswordResetEmail(correo)
+    navegarA('vista-correo-enviado', { silencioso: true });
+}
+
+function guardarNuevaPasswordSimulada(e) {
+    e.preventDefault();
+    const pwd  = document.getElementById('nueva-pwd')?.value  || '';
+    const pwd2 = document.getElementById('nueva-pwd2')?.value || '';
+
+    if (!pwd || !pwd2) { alert('Completá todos los campos.'); return; }
+    if (pwd.length < 6) { alert('La contraseña debe tener al menos 6 caracteres.'); return; }
+    if (pwd !== pwd2) { alert('Las contraseñas no coinciden.'); return; }
+
+    // TODO: reemplazar por firebase.auth().confirmPasswordReset(actionCode, pwd)
+    navegarA('vista-password-actualizada', { silencioso: true });
+}
+
+// ── AVATAR DE PERFIL EN HOME ──────────────────────────────────────────────────
+
+function actualizarAvatarHome() {
+    const u       = sesionActual || usuarioActual;
+    const nombre  = u?.nombre || 'U';
+    const inicialEl = document.getElementById('perfil-home-inicial');
+    if (inicialEl) inicialEl.textContent = nombre[0].toUpperCase();
+}
+
+function togglePerfilHome() {
+    const card = document.getElementById('perfil-home-card');
+    if (!card) return;
+
+    const visible = card.style.display !== 'none';
+    if (visible) {
+        card.style.display = 'none';
+        return;
+    }
+
+    // Obtener datos actuales (con fallback seguro)
+    const u      = sesionActual || usuarioActual;
+    const nombre = u?.nombre || 'Usuario';
+    const correo = u?.correo || '-';
+    const rol    = u?.rol    || 'empleado';
+    const rolLabel = rol === 'administrador' ? 'Administrador' : 'Empleado';
+
+    const nombreEl = document.getElementById('phc-nombre');
+    const correoEl = document.getElementById('phc-correo');
+    const rolEl    = document.getElementById('phc-rol');
+
+    if (nombreEl) nombreEl.textContent = nombre;
+    if (correoEl) correoEl.textContent = correo;
+    if (rolEl)    rolEl.textContent    = rolLabel;
+
+    card.style.display = 'block';
+}
+
+// Cerrar la tarjeta al tocar fuera de ella
+document.addEventListener('click', (e) => {
+    const card = document.getElementById('perfil-home-card');
+    const btn  = document.getElementById('btn-perfil-home');
+    if (!card || card.style.display === 'none') return;
+    if (btn && btn.contains(e.target)) return; // clic en el avatar → manejado por togglePerfilHome
+    if (!card.contains(e.target)) card.style.display = 'none';
+}, true);
