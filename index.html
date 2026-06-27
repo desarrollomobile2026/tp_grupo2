@@ -51,6 +51,15 @@
         <span class="header-titulo header-titulo--seleccionar-talle">Nuevo talle</span>
         <span class="header-titulo header-titulo--confirmar-cambio">Confirmar cambio</span>
         <span class="header-titulo header-titulo--cambio-realizado">Cambio realizado</span>
+        <span class="header-titulo header-titulo--configuracion">Configuración</span>
+        <span class="header-titulo header-titulo--gestion-usuarios">Gestión de usuarios</span>
+        <span class="header-titulo header-titulo--crear-usuario">Crear usuario</span>
+        <span class="header-titulo header-titulo--editar-usuario">Editar usuario</span>
+        <span class="header-titulo header-titulo--cambiar-rol">Cambiar rol</span>
+        <span class="header-titulo header-titulo--confirmar-usuario">Confirmar</span>
+        <span class="header-titulo header-titulo--mi-perfil">Mi perfil</span>
+        <span class="header-titulo header-titulo--editar-perfil">Editar perfil</span>
+        <span class="header-titulo header-titulo--cambiar-password">Cambiar contraseña</span>
         <button class="btn-nav" id="btn-menu" onclick="abrirMenu()">
             <i data-lucide="menu"></i>
         </button>
@@ -822,6 +831,234 @@
         </div>
     </main>
 
+    <!-- Vista Configuración -->
+    <main id="vista-configuracion" class="vista">
+        <!-- VISTAS DE GESTIÓN DE USUARIOS (insertas antes del contenido de config para orden lógico) -->
+        <div class="config-lista">
+            <button class="config-item" onclick="irAMiPerfil()">
+                <i data-lucide="user-round"></i>
+                <span>Mi perfil</span>
+                <i data-lucide="chevron-right" class="config-chevron"></i>
+            </button>
+            <button class="config-item" onclick="irAGestionUsuarios()">
+                <i data-lucide="users"></i>
+                <span>Gestión de usuarios</span>
+                <i data-lucide="chevron-right" class="config-chevron"></i>
+            </button>
+            <button class="config-item" onclick="irAClientes()">
+                <i data-lucide="user-round"></i>
+                <span>Gestión de clientes</span>
+                <i data-lucide="chevron-right" class="config-chevron"></i>
+            </button>
+            <button class="config-item" onclick="irACambiarPassword()">
+                <i data-lucide="lock-keyhole"></i>
+                <span>Cambiar contraseña</span>
+                <i data-lucide="chevron-right" class="config-chevron"></i>
+            </button>
+            <button class="config-item config-item-cerrar" onclick="cerrarSesionLocal()">
+                <i data-lucide="log-out"></i>
+                <span>Cerrar sesión</span>
+                <i data-lucide="chevron-right" class="config-chevron"></i>
+            </button>
+        </div>
+    </main>
+
+    <!-- ── GESTIÓN DE USUARIOS ─────────────────────────────── -->
+
+    <!-- 1. Lista de usuarios -->
+    <main id="vista-gestion-usuarios" class="vista">
+        <div id="usuarios-lista" class="clientes-lista">
+            <p class="cargando" style="text-align:center;padding:20px 0;">Cargando usuarios...</p>
+        </div>
+        <button class="btn-primary btn-con-icono usuarios-fab" onclick="abrirCrearUsuario()">
+            <i data-lucide="plus"></i>
+            Crear usuario
+        </button>
+    </main>
+
+    <!-- 2. Crear usuario -->
+    <main id="vista-crear-usuario" class="vista">
+        <form class="form-moniarquia" onsubmit="guardarNuevoUsuario(event)">
+            <div class="input-group">
+                <label>Nombre completo</label>
+                <input type="text" id="nuevo-usr-nombre" placeholder="Ej: María García" required>
+            </div>
+            <div class="input-group">
+                <label>Correo electrónico</label>
+                <input type="email" id="nuevo-usr-correo" placeholder="Ej: maria@moniarquia.com" required>
+            </div>
+            <div class="input-group">
+                <label>Rol</label>
+                <select id="nuevo-usr-rol" required>
+                    <option value="">Seleccioná un rol</option>
+                    <option value="administrador">Administrador</option>
+                    <option value="empleado">Empleado</option>
+                </select>
+            </div>
+            <button type="submit" class="btn-primary btn-submit" id="btn-guardar-nuevo-usuario">Crear usuario</button>
+        </form>
+    </main>
+
+    <!-- 3. Editar usuario -->
+    <main id="vista-editar-usuario" class="vista">
+        <form class="form-moniarquia" onsubmit="guardarEdicionUsuario(event)">
+            <div class="input-group">
+                <label>Nombre completo</label>
+                <input type="text" id="edit-usr-nombre" placeholder="Nombre" required>
+            </div>
+            <div class="input-group">
+                <label>Correo electrónico</label>
+                <input type="email" id="edit-usr-correo" placeholder="correo@ejemplo.com" required>
+            </div>
+            <div class="input-group">
+                <label>Rol</label>
+                <select id="edit-usr-rol" required>
+                    <option value="administrador">Administrador</option>
+                    <option value="empleado">Empleado</option>
+                </select>
+            </div>
+            <button type="submit" class="btn-primary btn-submit" id="btn-guardar-edicion-usuario">Guardar cambios</button>
+        </form>
+    </main>
+
+    <!-- 4. Cambiar rol -->
+    <main id="vista-cambiar-rol" class="vista">
+        <div class="cambiar-rol-card">
+            <p class="cambiar-rol-nombre" id="cambiar-rol-nombre">-</p>
+            <p class="cambiar-rol-correo" id="cambiar-rol-correo">-</p>
+            <p class="cambiar-rol-actual">Rol actual: <strong id="cambiar-rol-actual">-</strong></p>
+        </div>
+        <form class="form-moniarquia" onsubmit="guardarCambioRol(event)">
+            <div class="input-group">
+                <label>Nuevo rol</label>
+                <select id="cambiar-rol-select" required>
+                    <option value="administrador">Administrador</option>
+                    <option value="empleado">Empleado</option>
+                </select>
+            </div>
+            <button type="submit" class="btn-primary btn-submit" id="btn-guardar-rol">Confirmar cambio</button>
+        </form>
+    </main>
+
+    <!-- 5. Confirmar acción (activar / desactivar / eliminar) -->
+    <main id="vista-confirmar-usuario" class="vista">
+        <div class="confirmar-card">
+            <i data-lucide="alert-triangle" class="confirmar-icono"></i>
+            <p id="confirmar-usuario-pregunta" class="confirmar-nombre">¿Confirmar esta acción?</p>
+            <p id="confirmar-usuario-info" class="confirmar-desc">-</p>
+            <p id="confirmar-usuario-advertencia" class="confirmar-desc" style="display:none; color:var(--rojo-moniarquia);"></p>
+        </div>
+        <div class="confirmar-acciones">
+            <button class="btn-outline" onclick="volverAtras()">Cancelar</button>
+            <button id="btn-ejecutar-accion-usuario" class="btn-danger" onclick="ejecutarAccionUsuario()">Confirmar</button>
+        </div>
+    </main>
+
+    <!-- 6. Éxito de operación -->
+    <main id="vista-exito-usuario" class="vista">
+        <div class="exito-card">
+            <div class="exito-icono-verde">
+                <i data-lucide="check" class="exito-check"></i>
+            </div>
+            <h2 id="exito-usuario-titulo" class="exito-titulo">Operación completada</h2>
+            <p id="exito-usuario-desc" class="exito-desc">-</p>
+        </div>
+        <div class="exito-acciones">
+            <button class="btn-primary" onclick="irAGestionUsuarios()">Volver a Gestión de usuarios</button>
+            <button class="btn-outline" onclick="navegarA('vista-configuracion', { silencioso: true })">Ir a Configuración</button>
+        </div>
+    </main>
+
+    <!-- ── MI PERFIL ─────────────────────────────────────────────── -->
+
+    <!-- 1. Ver perfil -->
+    <main id="vista-mi-perfil" class="vista">
+        <div class="perfil-card">
+            <div class="perfil-avatar" id="perfil-avatar">?</div>
+            <div class="perfil-info">
+                <h2 class="perfil-nombre" id="perfil-nombre">-</h2>
+                <p class="perfil-correo" id="perfil-correo">-</p>
+                <div class="usuario-badges" style="margin-top:8px;">
+                    <span class="badge-rol" id="perfil-badge-rol">-</span>
+                    <span class="badge-estado" id="perfil-badge-estado">-</span>
+                </div>
+            </div>
+        </div>
+        <button class="btn-primary btn-con-icono" onclick="abrirEditarPerfil()">
+            <i data-lucide="pencil"></i>
+            Editar perfil
+        </button>
+    </main>
+
+    <!-- 2. Editar perfil -->
+    <main id="vista-editar-perfil" class="vista">
+        <form class="form-moniarquia" onsubmit="guardarEdicionPerfil(event)">
+            <div class="input-group">
+                <label>Nombre completo</label>
+                <input type="text" id="editar-perfil-nombre" placeholder="Tu nombre" required>
+            </div>
+            <div class="input-group">
+                <label>Correo electrónico</label>
+                <input type="email" id="editar-perfil-correo" placeholder="tu@email.com" required>
+            </div>
+            <button type="submit" class="btn-primary btn-submit" id="btn-guardar-perfil">Guardar cambios</button>
+        </form>
+    </main>
+
+    <!-- 3. Éxito perfil actualizado -->
+    <main id="vista-exito-perfil" class="vista">
+        <div class="exito-card">
+            <div class="exito-icono-verde">
+                <i data-lucide="check" class="exito-check"></i>
+            </div>
+            <h2 class="exito-titulo">Perfil actualizado correctamente</h2>
+            <p class="exito-desc">Los cambios fueron guardados exitosamente.</p>
+        </div>
+        <div class="exito-acciones">
+            <button class="btn-primary" onclick="irAMiPerfil()">Volver a Mi perfil</button>
+            <button class="btn-outline" onclick="navegarA('vista-configuracion', { silencioso: true })">Ir a Configuración</button>
+        </div>
+    </main>
+
+    <!-- ── CAMBIAR CONTRASEÑA ─────────────────────────────────────── -->
+
+    <!-- 4. Formulario -->
+    <main id="vista-cambiar-password" class="vista">
+        <form class="form-moniarquia" onsubmit="guardarCambioPassword(event)">
+            <div class="input-group">
+                <label>Contraseña actual</label>
+                <input type="password" id="pwd-actual"
+                       placeholder="Contraseña actual" required autocomplete="current-password">
+            </div>
+            <div class="input-group">
+                <label>Nueva contraseña</label>
+                <input type="password" id="pwd-nueva"
+                       placeholder="Al menos 6 caracteres" required autocomplete="new-password">
+            </div>
+            <div class="input-group">
+                <label>Repetir nueva contraseña</label>
+                <input type="password" id="pwd-nueva2"
+                       placeholder="Repetir contraseña" required autocomplete="new-password">
+            </div>
+            <button type="submit" class="btn-primary btn-submit" id="btn-cambiar-pwd">Cambiar contraseña</button>
+        </form>
+    </main>
+
+    <!-- 5. Éxito contraseña actualizada -->
+    <main id="vista-exito-password" class="vista">
+        <div class="exito-card">
+            <div class="exito-icono-verde">
+                <i data-lucide="check" class="exito-check"></i>
+            </div>
+            <h2 class="exito-titulo">Contraseña actualizada correctamente</h2>
+            <p class="exito-desc">Tu contraseña fue cambiada. La próxima vez deberás usar la nueva contraseña.</p>
+        </div>
+        <div class="exito-acciones">
+            <button class="btn-primary" onclick="navegarA('vista-configuracion', { silencioso: true })">Volver a Configuración</button>
+            <button class="btn-outline" onclick="irAlInicio()">Ir al inicio</button>
+        </div>
+    </main>
+
     <nav class="bottom-nav">
         <button class="nav-item active" onclick="cambiarVista('vista-inventario', this)">
             <span class="icon">🏠</span>
@@ -865,13 +1102,13 @@
                 </button>
             </li>
             <li>
-                <button class="menu-item menu-item-disabled" onclick="mostrarProximamente('Configuración')">
+                <button class="menu-item" onclick="irAConfiguracion()">
                     <i data-lucide="settings"></i><span>Configuración</span>
                 </button>
             </li>
         </ul>
         <div class="menu-footer">
-            <button class="menu-item menu-item-cerrar" onclick="mostrarProximamente('Cerrar sesión')">
+            <button class="menu-item menu-item-cerrar" onclick="cerrarSesionLocal()">
                 <i data-lucide="log-out"></i><span>Cerrar sesión</span>
             </button>
         </div>
