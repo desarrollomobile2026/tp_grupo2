@@ -34,6 +34,7 @@ function esAdmin() {
 function aplicarRolUI() {
     const contenedor = document.getElementById('app-container');
     if (contenedor) contenedor.setAttribute('data-rol', sesionActual?.rol || 'empleado');
+    renderizarInventario();
 }
 
 function verificarPermisoAccion(accion) {
@@ -994,41 +995,6 @@ document.addEventListener('click', (e) => {
 }, true);
 
 
-function renderizarQRProducto(codigoQR) {
-    const section = document.getElementById('qr-producto-section');
-    const canvas  = document.getElementById('qr-canvas');
-    const texto   = document.getElementById('qr-codigo-texto');
-
-    if (!section || !canvas) return;
-
-    section.style.display = codigoQR ? 'flex' : 'none';
-    if (!codigoQR) return;
-
-    if (texto) texto.textContent = codigoQR;
-
-    if (typeof QRious !== 'undefined') {
-        new QRious({
-            element:    canvas,
-            value:      codigoQR,
-            size:       160,
-            background: '#FFFFFF',
-            foreground: '#000000',
-            level:      'M'
-        });
-    } else {
-        console.warn('QRious no está disponible. Verificá la carga del CDN.');
-    }
-
-    // Conectar el botón de descarga con el codigoQR actual
-    const btnDesc = document.getElementById('btn-descargar-qr');
-    if (btnDesc) {
-        btnDesc.onclick = () => {
-            const nombre = (document.getElementById('inv-nombre')?.value || 'producto').trim();
-            descargarQRProducto(codigoQR, nombre);
-        };
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-    }
-}
 
 function descargarQRProducto(codigoQR, nombreProducto) {
     if (!codigoQR || typeof QRious === 'undefined') {
@@ -1146,16 +1112,12 @@ function abrirFormProducto(id) {
         document.getElementById('inv-foto').value      = p.foto_url || p.imagen || '';
         inicializarColorSelector(coloresExist);
         renderizarStockGrid(p.categoria, stockPorTalla);
-        // Mostrar QR: usar el existente o pre-generar uno a partir del ID ya conocido
-        const codigoQRMostrar = p.codigoQR || `MONIARQUIA_PRODUCTO_${id}`;
-        renderizarQRProducto(codigoQRMostrar);
     } else {
         if (titulo)     titulo.textContent     = 'Agregar producto';
         if (headerSpan) headerSpan.textContent = 'Agregar producto';
         document.getElementById('form-inventario-producto').reset();
         inicializarColorSelector([]);
         renderizarStockGrid('', {});
-        renderizarQRProducto(null); // ocultar la sección QR para productos nuevos
     }
 
     navegarA('vista-form-producto');
