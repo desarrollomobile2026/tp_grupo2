@@ -67,6 +67,7 @@
         <span class="header-titulo header-titulo--editar-perfil">Editar perfil</span>
         <span class="header-titulo header-titulo--cambiar-password">Cambiar contraseña</span>
         <span class="header-titulo header-titulo--gestionar-stock">Gestionar stock</span>
+        <span class="header-titulo header-titulo--config-stock">Alertas de stock bajo</span>
         <button class="btn-nav" id="btn-menu" onclick="abrirMenu()">
             <i data-lucide="menu"></i>
         </button>
@@ -294,25 +295,37 @@
                 <span class="deco-line"></span>
             </div>
         </div>
-        <div class="home-cards">
-            <button class="home-card" onclick="abrirEscaneo()">
-                <div class="home-card-icono">
-                    <i data-lucide="shopping-cart"></i>
+        <div class="home-bottom">
+            <!-- Card de alertas de stock bajo — visible solo cuando hay alertas activas -->
+            <div id="home-alertas-stock" class="home-alerta-stock" style="display:none;">
+                <div class="home-alerta-header">
+                    <i data-lucide="alert-triangle"></i>
+                    <p class="home-alerta-titulo">Productos con poco stock</p>
                 </div>
-                <div class="home-card-texto">
-                    <span class="home-card-titulo">Iniciar venta</span>
-                    <span class="home-card-desc">Escaneá productos para iniciar el carrito</span>
-                </div>
-            </button>
-            <button class="home-card" onclick="navegarA('vista-inventario')">
-                <div class="home-card-icono">
-                    <i data-lucide="package"></i>
-                </div>
-                <div class="home-card-texto">
-                    <span class="home-card-titulo">Consultar stock</span>
-                    <span class="home-card-desc">Revisá la disponibilidad de los productos</span>
-                </div>
-            </button>
+                <div id="home-alertas-lista" class="home-alerta-lista"></div>
+                <button class="home-alerta-btn" onclick="navegarA('vista-inventario')">Ver productos</button>
+            </div>
+
+            <div class="home-cards">
+                <button class="home-card" onclick="abrirEscaneo()">
+                    <div class="home-card-icono">
+                        <i data-lucide="shopping-cart"></i>
+                    </div>
+                    <div class="home-card-texto">
+                        <span class="home-card-titulo">Iniciar venta</span>
+                        <span class="home-card-desc">Escaneá productos para iniciar el carrito</span>
+                    </div>
+                </button>
+                <button class="home-card" onclick="navegarA('vista-inventario')">
+                    <div class="home-card-icono">
+                        <i data-lucide="package"></i>
+                    </div>
+                    <div class="home-card-texto">
+                        <span class="home-card-titulo">Consultar stock</span>
+                        <span class="home-card-desc">Revisá la disponibilidad de los productos</span>
+                    </div>
+                </button>
+            </div>
         </div>
     </main>
 
@@ -1112,6 +1125,11 @@
                 <span>Gestión de clientes</span>
                 <i data-lucide="chevron-right" class="config-chevron"></i>
             </button>
+            <button class="config-item solo-admin" onclick="abrirConfigStock()">
+                <i data-lucide="package-check"></i>
+                <span>Alertas de stock bajo</span>
+                <i data-lucide="chevron-right" class="config-chevron"></i>
+            </button>
             <button class="config-item" onclick="irACambiarPassword()">
                 <i data-lucide="lock-keyhole"></i>
                 <span>Cambiar contraseña</span>
@@ -1336,6 +1354,31 @@
             <span class="text">Cargar</span>
         </button>
     </nav>
+
+    <!-- Vista: Alertas de stock bajo (configuración) -->
+    <main id="vista-config-stock" class="vista">
+        <h2 class="section-title">Alertas de stock bajo</h2>
+        <div class="config-stock-form">
+            <div class="config-stock-fila">
+                <div class="config-stock-label">
+                    <p class="config-stock-nombre">Activar alertas</p>
+                    <p class="config-stock-desc">Notificar cuando el stock de un talle es bajo</p>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="config-stock-activo">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <div class="config-stock-fila" id="config-stock-min-fila">
+                <div class="config-stock-label">
+                    <p class="config-stock-nombre">Stock mínimo por talle</p>
+                    <p class="config-stock-desc">Alertar cuando un talle tenga esta cantidad o menos</p>
+                </div>
+                <input type="number" id="config-stock-minimo" min="1" max="99" class="config-stock-input">
+            </div>
+            <button class="btn-primary btn-submit" onclick="guardarConfigStockForm()">Guardar configuración</button>
+        </div>
+    </main>
 
     <!-- Modal de QR del producto -->
     <div id="modal-qr-overlay" class="modal-qr-overlay" style="display:none;" onclick="cerrarModalQR()">
