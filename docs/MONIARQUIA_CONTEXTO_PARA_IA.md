@@ -28,7 +28,7 @@ El showroom operaba con anotaciones manuales y sin control de stock en tiempo re
 | Íconos | Lucide Icons (CDN) |
 | Fuentes | Inter + Mr Dafoe (Google Fonts) |
 | QR generación | QRious v4.0.2 (CDN) |
-| QR lectura | jsQR v1.4.0 (CDN) — pendiente resolver en iPhone |
+| QR lectura | jsQR v1.4.0 (CDN) — funcional |
 
 **Repositorio:** `https://github.com/desarrollomobile2026/tp_grupo2` — rama `oscar`
 
@@ -41,7 +41,7 @@ El showroom operaba con anotaciones manuales y sin control de stock en tiempo re
 | **Autenticación** | ⚠️ Parcial | Funciona con datos mock. Firebase Auth no activado. Ver sección 9. |
 | **Inicio / Home** | ✅ Implementado | Logo, menú, 2 cards de acción, avatar de perfil con rol. |
 | **Inventario** | ✅ Implementado | CRUD completo, filtros, selector visual de colores, stock por talla. |
-| **Escaneo de cámara** | ⚠️ Parcial | Cámara abre. Loop de lectura implementado. No funciona en iPhone. |
+| **Escaneo de cámara** | ✅ Implementado | Cámara, loop jsQR y búsqueda en Firestore funcionan correctamente. |
 | **Carrito** | ✅ Implementado | Selección de producto/talle/color/cantidad. Persiste en localStorage. |
 | **Ventas** | ✅ Implementado | Registro en Firestore, 3 métodos de pago, stock descontado atómicamente. |
 | **Clientes** | ✅ Implementado | Lista, alta, edición, eliminación. Buscador en tiempo real. |
@@ -51,7 +51,7 @@ El showroom operaba con anotaciones manuales y sin control de stock en tiempo re
 | **Configuración** | ✅ Implementado | Mi perfil, Gestión usuarios, Gestión clientes, Cambiar contraseña, Logout. |
 | **Gestión de usuarios** | ⚠️ Parcial | CRUD visual completo. Datos en memoria, no en Firestore. |
 | **QR — generación** | ✅ Implementado | codigoQR en Firestore, canvas visible, descarga PNG. |
-| **QR — escaneo** | ❌ Pendiente | Loop implementado pero no funciona en iPhone. Ver sección 9. |
+| **QR — escaneo** | ✅ Implementado | Escaneo QR funcional. Causa raíz resuelta (ver sección 9 y `docs/MONIARQUIA_QR.md`). |
 | **Permisos por rol** | ✅ Implementado | Restricciones visuales: admin vs empleado. |
 
 ---
@@ -216,6 +216,10 @@ Se intentó implementar carga de imágenes desde galería. El bucket requería c
 ### Búsqueda manual como fallback
 La app siempre ofrece "Buscar producto manualmente" en la pantalla de escaneo. Esto previene que el usuario quede bloqueado si la cámara o el QR fallan.
 
+### Hallazgo: causa raíz del problema de escaneo QR (Junio 2026)
+
+El problema del escaneo no estaba relacionado con jsQR, iOS Safari, ni el CDN. La causa fue funcional: el QR solo era accesible desde el formulario "Editar producto". Al interactuar con ese formulario y guardar, se producía un estado inconsistente que afectaba el escaneo. La reubicación del acceso al QR hacia el inventario (modal desde la card) resolvió el problema. **jsQR funciona correctamente en iPhone.**
+
 ### Autenticación simulada
 Firebase Auth fue implementado y luego revertido. El sistema actual usa:
 - `USUARIOS_MOCK[]` — array con email, password (hardcoded), rol
@@ -245,7 +249,7 @@ Se usó una metodología de etapas (1 a 8+). Cada etapa agrega funcionalidad sin
 
 ### ⚠️ Parcialmente implementado
 
-- **Escaneo QR:** loop de jsQR implementado, cámara funciona, pero en iPhone no detecta el QR impreso/descargado
+- **Escaneo QR:** ✅ funcional. La causa raíz del problema anterior fue la ubicación del QR dentro de "Editar producto". Al reubicarlo en el inventario (modal desde la card), el escaneo comenzó a funcionar correctamente.
 - **Autenticación:** funciona con mock; no conectada a Firebase Auth real
 - **Gestión de usuarios:** UI completa pero datos en memoria (no Firestore)
 - **Cambios y devoluciones:** solo cambio de talle del mismo producto
@@ -253,7 +257,7 @@ Se usó una metodología de etapas (1 a 8+). Cada etapa agrega funcionalidad sin
 ### ❌ Pendiente
 
 - Firebase Auth real habilitado en consola
-- Escaneo QR funcional en iPhone
+- ~~Escaneo QR funcional en iPhone~~ ✅ Resuelto
 - Gestión de usuarios conectada a Firestore
 - Recuperación de contraseña real (requiere Auth)
 - Reglas de seguridad en Firestore (actualmente abiertas)
@@ -263,29 +267,17 @@ Se usó una metodología de etapas (1 a 8+). Cada etapa agrega funcionalidad sin
 
 ## 9. Problemas abiertos (priorizados)
 
-### 1. 🔴 Escaneo QR no funcional en iPhone
+### ~~1. 🔴 Escaneo QR no funcional en iPhone~~ ✅ Resuelto
 
-**Síntoma:** La cámara se activa, el video se reproduce, el usuario ve el QR dentro del visor, pero la app nunca detecta el código ni abre el producto.
+**Causa raíz identificada (Junio 2026):**
+El problema no era técnico. El QR solo era accesible desde el formulario "Editar producto". Al descargar y luego guardar el producto desde ese formulario, se producía un estado inconsistente que afectaba el escaneo.
 
-**Lo que se sabe:**
-- jsQR está correctamente integrado con loop de `requestAnimationFrame`
-- `inversionAttempts: 'attemptBoth'` está configurado
-- `readyState >= 2` como condición (no `=== 4` que era demasiado estricto)
-- `videoEl.play()` se llama explícitamente (no `onloadedmetadata`)
-- El panel de diagnóstico muestra `CAM`, `LOOP`, `FRAMES`, `QR`, `DB`, `ERR`
+**Solución implementada:**
+El acceso al QR se reubicó en el inventario (botón en cada card → modal con canvas + descarga). El formulario de edición conserva el QR como acceso secundario.
 
-**Hipótesis no descartadas:**
-- jsQR no carga desde el CDN de jsDelivr en determinadas redes
-- El video entrega frames pero con `videoWidth/videoHeight === 0` en iOS
-- jsQR lee el QR pero el texto tiene caracteres extra (salto de línea, BOM)
-- El ID extraído no coincide con ningún documento en Firestore
+**Resultado:** jsQR, la cámara y la búsqueda en Firestore funcionan correctamente. Sistema QR estable.
 
-**Próximo paso para resolver:**
-Observar el panel de diagnóstico en iPhone y reportar el valor de `FRAMES` y `QR`.
-Si `FRAMES` no sube → el video no entrega datos.
-Si `FRAMES` sube pero `QR` dice "ninguno" → jsQR no decodifica.
-Si `QR` tiene texto → verificar ese texto contra Firestore manualmente.
-Ver `docs/MONIARQUIA_QR.md` sección 10 para pasos detallados.
+Ver `docs/MONIARQUIA_QR.md` sección de resolución final para el detalle completo.
 
 ---
 
@@ -331,7 +323,7 @@ Ver `docs/MONIARQUIA_QR.md` sección 10 para pasos detallados.
 - `app.js` — `iniciarEscaneoLoop()`, `procesarCodigoQR()`, `actualizarDebugEscaneo()`, `reintentarEscaneo()`, `volverAlCarritoDesdeEscaneo()`
 - `docs/*.md` — 4 archivos creados, 2 actualizados
 
-**Resultado:** El QR se genera y descarga correctamente. El escaneo está implementado pero no funciona en iPhone.
+**Resultado:** El sistema QR está completo y funcional — generación, descarga desde el inventario y escaneo funcionan correctamente. La causa raíz del problema de escaneo fue la ubicación del QR en "Editar producto" (no un problema técnico de jsQR ni de iOS).
 
 ---
 

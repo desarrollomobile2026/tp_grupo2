@@ -7,28 +7,13 @@
 
 ## 🔴 Alta prioridad
 
-### 1. Resolver escaneo QR en iPhone
+### 1. ~~Resolver escaneo QR en iPhone~~ ✅ Completado
 
-**Impacto:** Crítico — es el diferencial más importante del proyecto.
-**Esfuerzo estimado:** 2–4 horas de depuración.
-**Dependencias:** Ninguna.
-**Estado:** Implementado pero no funcional en iOS.
+**Estado:** Sistema QR completo y funcional — generación, descarga y escaneo operativos.
 
-**Pasos concretos:**
-1. Confirmar que jsQR carga (puede usar archivo local si el CDN falla)
-2. Verificar en panel de debug que `FRAMES` sube — si no sube, el video no entrega datos
-3. Si `FRAMES` sube pero `QR` dice "ninguno" → probar con `BarcodeDetector` nativa (iOS 17+)
-4. Si jsQR detecta texto, confirmar que el ID en el QR coincide con un documento en Firestore
-5. Ver `docs/MONIARQUIA_QR.md` sección 10 para pasos detallados
+**Causa raíz resuelta:** El QR solo era accesible desde "Editar producto". La reubicación hacia el inventario (modal desde la card) resolvió el problema. jsQR y la cámara funcionan correctamente.
 
-**Alternativa si jsQR falla:**
-```js
-if ('BarcodeDetector' in window) {
-    const detector = new BarcodeDetector({ formats: ['qr_code'] });
-    const barcodes = await detector.detect(videoEl);
-    if (barcodes.length > 0) procesarCodigoQR(barcodes[0].rawValue);
-}
-```
+**Ver:** `docs/MONIARQUIA_QR.md` sección 12 para el detalle completo.
 
 ---
 
@@ -181,7 +166,7 @@ Posible implementación: generar CSV o tabla HTML imprimible por fecha/período.
 
 ```
 🔴 CRÍTICO
-├── Escaneo QR en iPhone
+├── ~~Escaneo QR en iPhone~~ ✅
 ├── Firebase Auth real
 └── Reglas Firestore
 

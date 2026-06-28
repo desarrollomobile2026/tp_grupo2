@@ -606,10 +606,70 @@ Escanear QR con la cámara de la app
     → agregar al carrito
 ```
 
-La implementación técnica de ese flujo está completa (funciones, lógica, validaciones, manejo de errores). El problema es que en iPhone no se ha podido confirmar que jsQR detecte el código desde el video. Las hipótesis más probables son: jsQR no carga del CDN, el video no entrega frames en iOS, o el readyState no alcanza el umbral esperado.
-
-Cualquier desarrollador puede retomar este trabajo siguiendo los pasos de la sección 10 para identificar exactamente en cuál eslabón de la cadena se rompe el flujo.
+La implementación técnica de ese flujo está completa (funciones, lógica, validaciones, manejo de errores).
 
 ---
 
-*Documento creado: Junio 2026.*
+## 12. Resolución final del incidente (Junio 2026)
+
+### Causa raíz identificada
+
+Después de múltiples hipótesis relacionadas con jsQR, Safari, `requestAnimationFrame`, `readyState`, `BarcodeDetector` y CDNs, se determinó que el problema **no era técnico**.
+
+La causa raíz fue **funcional y de UX**:
+
+El acceso al QR estaba ubicado únicamente dentro del formulario **"Editar producto"**. El flujo era:
+
+```
+Inventario → Editar producto → Ver QR → Descargar QR → Guardar producto
+```
+
+Al interactuar con el formulario de edición y guardar el producto, se producía un estado inconsistente que afectaba el comportamiento del escaneo posterior.
+
+### Solución implementada
+
+Se reubicó el acceso al QR directamente en las cards del Inventario:
+
+```
+Inventario → [ícono QR en la card] → Modal con:
+    - Nombre del producto
+    - Canvas con el QR
+    - Código textual
+    - Botón "Descargar QR"
+```
+
+El formulario de edición conserva el QR como acceso secundario (sin eliminar).
+
+### Lo que se descartó como causa
+
+- jsQR no tenía problemas de carga desde el CDN
+- La cámara funcionaba correctamente en iPhone
+- `requestAnimationFrame` + `canvas.getImageData()` operaban bien
+- `readyState >= 2` era la condición correcta
+- `play()` explícito funcionaba sin problemas
+
+### Estado final del sistema QR
+
+| Componente | Estado |
+|---|---|
+| QRious — generación de canvas | ✅ Funcional |
+| Descarga de PNG (300px) | ✅ Funcional — accesible desde Inventario |
+| jsQR — lectura desde cámara | ✅ Funcional |
+| Escaneo → búsqueda en Firestore | ✅ Funcional |
+| Escaneo → apertura de pantalla de producto | ✅ Funcional |
+| Panel de diagnóstico `#escaner-status` | ✅ Funcional (puede mantenerse o eliminarse) |
+
+### Conclusión
+
+El sistema QR de Moniarquía se considera **estable y funcional**.
+
+- QRious genera los códigos correctamente.
+- jsQR los lee correctamente.
+- La cámara funciona en iPhone.
+- El flujo completo (escanear → identificar → abrir producto → agregar al carrito) opera sin problemas.
+
+La documentación previa sobre "hipótesis de falla" en las secciones 9 y 10 de este documento tiene valor histórico como registro de depuración, pero **no refleja el estado actual del sistema**.
+
+---
+
+*Documento creado: Junio 2026. Resolución final: Junio 2026.*

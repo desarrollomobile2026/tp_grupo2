@@ -1239,6 +1239,90 @@ body {
     color: var(--blanco);
 }
 
+/* ── MODAL QR — visible desde las cards del inventario ──────────────────── */
+.modal-qr-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 20px;
+}
+
+.modal-qr-panel {
+    background: var(--blanco);
+    border: 1px solid var(--negro-pleno);
+    border-radius: 16px;
+    padding: 20px;
+    width: 100%;
+    max-width: 300px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+}
+
+.modal-qr-nombre {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--negro-texto);
+    text-align: center;
+    align-self: stretch;
+}
+
+.modal-qr-canvas {
+    width: 180px;
+    height: 180px;
+    border-radius: 8px;
+    display: block;
+}
+
+.modal-qr-codigo {
+    font-size: 9px;
+    color: var(--gris);
+    text-align: center;
+    word-break: break-all;
+    line-height: 1.4;
+}
+
+.modal-qr-acciones {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+}
+
+/* Botón de descarga de QR en la card del inventario */
+.inv-btn-descargar-qr {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    background: transparent;
+    border: 1px solid rgba(0, 0, 0, 0.18);
+    border-radius: 8px;
+    padding: 7px 10px;
+    margin-top: 6px;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--negro-texto);
+    cursor: pointer;
+    transition: background-color 0.15s;
+}
+
+.inv-btn-descargar-qr:active { background-color: var(--rosa-base); }
+
+.inv-btn-descargar-qr svg {
+    width: 14px;
+    height: 14px;
+    stroke: var(--gris);
+    flex-shrink: 0;
+}
+
 /* ── CÓDIGO QR DEL PRODUCTO ──────────────────────────────────────────────── */
 .qr-section {
     background-color: var(--blanco);
@@ -2500,44 +2584,6 @@ body {
    ESCANEO DE PRODUCTO
    ========================================== */
 
-/* Panel de debug visible en pantalla (para diagnóstico en iPhone) */
-/* Panel de debug — fixed al fondo para garantizar visibilidad en cualquier iPhone */
-/* Panel de estado del escáner — inline dentro de la vista, siempre visible */
-.escaner-status {
-    background: rgba(0, 0, 0, 0.80);
-    border-radius: 10px;
-    padding: 8px 12px;
-    flex-shrink: 0;
-    border: 1px solid rgba(0, 200, 100, 0.35);
-}
-
-.escaner-status-fila {
-    display: flex;
-    align-items: baseline;
-    gap: 6px;
-    font-family: 'Courier New', monospace;
-    font-size: 10px;
-    line-height: 1.7;
-    color: #b8ffb8;
-}
-
-.escaner-status-label {
-    font-weight: 700;
-    color: #60cc80;
-    min-width: 46px;
-    flex-shrink: 0;
-}
-
-.escaner-status-fila > span:last-child {
-    color: #ffffff;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    flex: 1;
-    min-width: 0;
-}
-
-.escaner-status-err > span:last-child { color: #ff9090; }
 
 #app-container[data-vista="vista-escanear"] .header-titulo--escanear { display: block; }
 

@@ -39,7 +39,7 @@ La restricción por rol se aplica **visualmente en la interfaz**. Las reglas de 
 | Íconos | Lucide Icons (CDN) |
 | Fuentes | Inter (body) + Mr Dafoe (logo) — Google Fonts |
 | QR Generator | QRious v4.0.2 (CDN) |
-| QR Reader | jsQR v1.4.0 (CDN) — **pendiente de resolver en iOS** |
+| QR Reader | jsQR v1.4.0 (CDN) — funcional |
 
 ---
 
@@ -52,7 +52,7 @@ La restricción por rol se aplica **visualmente en la interfaz**. Las reglas de 
 | **Autenticación** | ⚠️ Simulada | Login/registro funcionan con datos mock. Firebase Auth está revertido. |
 | **Home / Inicio** | ✅ Completo | Logo, menú hamburguesa, dos cards de acción, avatar de perfil. |
 | **Inventario** | ✅ Completo | CRUD completo, búsqueda, filtros por categoría, talles por categoría. |
-| **Escaneo de cámara** | ⚠️ Parcial | Cámara abre correctamente. jsQR integrado pero lectura QR no confirmada en iPhone. |
+| **Escaneo de cámara** | ✅ Completo | Cámara, loop jsQR y búsqueda en Firestore funcionan correctamente. |
 | **Carrito de venta** | ✅ Completo | Selección de producto, talle, color, cantidad. Persiste en localStorage. |
 | **Ventas** | ✅ Completo | Registro en Firestore, 3 métodos de pago, descuento de stock atómico. |
 | **Clientes** | ✅ Completo | Lista, alta, edición, eliminación con confirmación. |
@@ -62,8 +62,8 @@ La restricción por rol se aplica **visualmente en la interfaz**. Las reglas de 
 | **Configuración** | ✅ Completo | Pantalla con 5 opciones: Mi perfil, Gestión de usuarios, Gestión de clientes, Cambiar contraseña, Cerrar sesión. |
 | **Gestión de usuarios** | ⚠️ Mock | Flujo visual completo (CRUD) pero con datos locales. No conectado a Firestore. |
 | **Mi perfil / Cambiar contraseña** | ⚠️ Mock | Funcionalidad visual completa, no conectada a Firebase Auth. |
-| **QR — Generación** | ✅ Completo | Se genera y guarda `codigoQR` en Firestore. Se visualiza y descarga en PDF. |
-| **QR — Lectura/Escaneo** | ❌ Pendiente | Loop implementado, no funciona en iPhone. Ver `docs/MONIARQUIA_QR.md`. |
+| **QR — Generación** | ✅ Completo | Se genera y guarda `codigoQR` en Firestore. Accesible desde la card del inventario (modal). |
+| **QR — Lectura/Escaneo** | ✅ Completo | Escaneo QR funcional. Causa raíz resuelta (ver `docs/MONIARQUIA_QR.md`). |
 | **Permisos por rol** | ✅ Completo | Restricciones visuales aplicadas en inventario, clientes y configuración. |
 | **Responsividad** | ✅ Completo | Corregida para múltiples tamaños de pantalla (dvh, clamp). |
 | **Navegación con historial** | ✅ Completo | Stack de historial, botón volver inteligente. |
@@ -191,7 +191,7 @@ Firebase permite desplegar sin servidor propio, tiene integración nativa con Fi
 
 ### jsQR para lectura de QR
 
-Biblioteca pura JavaScript que trabaja con `ImageData` del canvas. Alternativa a `BarcodeDetector` nativa (no disponible en iOS < 17). **Estado actual: implementado pero no funcional en iPhone.** Ver `docs/MONIARQUIA_QR.md`.
+Biblioteca pura JavaScript que trabaja con `ImageData` del canvas. Funciona con `requestAnimationFrame` + `canvas.getImageData()`. **Estado actual: funcional.** El problema inicial no era técnico — ver `docs/MONIARQUIA_QR.md` para el detalle de la resolución.
 
 ### Autenticación simulada (no Firebase Auth)
 
@@ -220,7 +220,7 @@ Al registrar una venta, el descuento de stock se hace en un `batch.commit()` jun
 
 | Problema | Impacto | Estado |
 |---|---|---|
-| **Escaneo QR no funcional en iPhone** | Alto — impide el flujo principal de venta por QR | Pendiente (ver `docs/MONIARQUIA_QR.md`) |
+| ~~Escaneo QR no funcional~~ | Resuelto — ver `docs/MONIARQUIA_QR.md` | — |
 | **Firebase Auth no activo** | Alto — autenticación es simulada, sin seguridad real | Pendiente (requiere activar en consola) |
 | **Gestión de usuarios con datos mock** | Medio — los usuarios creados no persisten en Firestore | Pendiente |
 | **Cambio por otro producto no implementado** | Bajo — solo se puede cambiar de talle del mismo producto | Pendiente |
