@@ -348,7 +348,7 @@
         <div class="inv-header">
             <p class="vista-desc inv-subtitulo">Consultá y gestioná el stock disponible</p>
             <div class="inv-header-acciones">
-                <button class="btn-escanear solo-admin" onclick="abrirEscaneo()" title="Escanear producto">
+                <button class="btn-escanear solo-admin" onclick="abrirEscaneo('inventario')" title="Escanear producto">
                     <i data-lucide="scan-line"></i>
                 </button>
                 <button class="btn-agregar solo-admin" onclick="abrirFormProducto(null)" title="Agregar producto">
@@ -536,34 +536,6 @@
                 <span class="escaner-corner br"></span>
             </div>
             <div id="escaner-estado" class="escaner-estado" style="display:none;"></div>
-        </div>
-
-        <!-- Panel de estado inline — siempre visible dentro de la vista -->
-        <div id="escaner-status" class="escaner-status">
-            <div class="escaner-status-fila">
-                <span class="escaner-status-label">CAM</span>
-                <span id="est-camara">esperando</span>
-            </div>
-            <div class="escaner-status-fila">
-                <span class="escaner-status-label">LOOP</span>
-                <span id="est-loop">detenido</span>
-            </div>
-            <div class="escaner-status-fila">
-                <span class="escaner-status-label">FRAMES</span>
-                <span id="est-frames">0</span>
-            </div>
-            <div class="escaner-status-fila">
-                <span class="escaner-status-label">QR</span>
-                <span id="est-qr">ninguno</span>
-            </div>
-            <div class="escaner-status-fila">
-                <span class="escaner-status-label">DB</span>
-                <span id="est-db">–</span>
-            </div>
-            <div class="escaner-status-fila escaner-status-err">
-                <span class="escaner-status-label">ERR</span>
-                <span id="est-error">ninguno</span>
-            </div>
         </div>
 
         <!-- Acciones -->
@@ -1375,6 +1347,22 @@
             <span class="text">Cargar</span>
         </button>
     </nav>
+
+    <!-- Modal de QR del producto -->
+    <div id="modal-qr-overlay" class="modal-qr-overlay" style="display:none;" onclick="cerrarModalQR()">
+        <div class="modal-qr-panel" onclick="event.stopPropagation()">
+            <p id="modal-qr-nombre" class="modal-qr-nombre">—</p>
+            <canvas id="modal-qr-canvas" class="modal-qr-canvas"></canvas>
+            <p id="modal-qr-codigo" class="modal-qr-codigo">—</p>
+            <div class="modal-qr-acciones">
+                <button class="btn-primary btn-con-icono" onclick="modalDescargarQR()">
+                    <i data-lucide="download"></i>
+                    Descargar QR
+                </button>
+                <button class="btn-outline" onclick="cerrarModalQR()">Cerrar</button>
+            </div>
+        </div>
+    </div>
 
     <div id="menu-overlay" class="menu-overlay" onclick="cerrarMenu()"></div>
     <nav id="menu-lateral" class="menu-lateral">

@@ -71,10 +71,12 @@
 - Cambiar contraseña: flujo visual con validaciones
 - Cerrar sesión: limpia estado y navega al splash
 
-### QR (generación)
+### QR (generación, descarga y escaneo)
 - `codigoQR: "MONIARQUIA_PRODUCTO_<idFirestore>"` guardado en Firestore
-- Canvas con el QR visible en el formulario de edición del producto
-- Descarga como PNG de 300px (calidad para impresión)
+- Canvas con el QR visible desde la **card del inventario** (modal) y como acceso secundario en el formulario de edición
+- Descarga como PNG de 300px (calidad para impresión) — disponible en el modal del inventario
+- **Escaneo QR funcional** — cámara, loop de jsQR y búsqueda en Firestore operativos
+- **Causa raíz del problema anterior resuelta:** el QR solo era accesible desde "Editar producto". Al reubicarlo en el inventario, el flujo se normalizó y el escaneo comenzó a funcionar.
 
 ---
 
@@ -86,13 +88,9 @@
 - Recuperación de contraseña es solo visual (no envía emails)
 - **Requiere:** activar Firebase Auth Email/Password en consola
 
-### QR — Lectura/Escaneo
-- Loop de `requestAnimationFrame` + jsQR implementado correctamente
-- Cámara abre y muestra video en iPhone
-- jsQR integrado con canvas oculto
-- **No funciona:** detección del QR en iPhone (posiblemente CDN, frames, o readyState)
-- Panel de diagnóstico inline implementado para depuración
-- **Ver:** `docs/MONIARQUIA_QR.md` para hipótesis y próximos pasos
+### ~~QR — Lectura/Escaneo~~ ✅ Resuelto
+
+El problema del escaneo QR fue identificado y resuelto. Ver `docs/MONIARQUIA_QR.md` sección de resolución final para el detalle completo.
 
 ### Gestión de usuarios (Configuración)
 - Pantallas y flujos completos: lista, crear, editar, cambiar rol, activar/desactivar, eliminar
@@ -110,7 +108,7 @@
 | Funcionalidad | Prioridad | Dependencia |
 |---|---|---|
 | Firebase Auth real (login, registro, logout) | Alta | Activar en Firebase Console |
-| Escaneo QR funcional en iPhone | Alta | Depurar jsQR o usar BarcodeDetector nativa |
+| ~~Escaneo QR funcional~~ | ✅ Resuelto | — |
 | Gestión de usuarios conectada a Firestore | Media | Firebase Auth activo |
 | Cambio por otro producto en C&D | Baja | Ninguna |
 | Recuperación real de contraseña | Media | Firebase Auth activo |
@@ -121,11 +119,9 @@
 
 ## 🔮 Próximas iteraciones sugeridas
 
-### Iteración A — Resolver QR en iPhone
-1. Confirmar que jsQR carga (puede usar archivo local si el CDN falla)
-2. Agregar log del `readyState` del video en el panel de debug
-3. Probar con `BarcodeDetector` nativa en iOS 17+
-4. Confirmar que el ID extraído del QR existe en Firestore
+### Iteración A — ~~Resolver QR en iPhone~~ ✅ Completado
+
+El sistema QR (generación, descarga y escaneo) está funcionando correctamente. Ver `docs/MONIARQUIA_QR.md` para el detalle de la resolución.
 
 ### Iteración B — Activar Firebase Auth
 1. Habilitar Email/Password en Firebase Console
@@ -146,7 +142,7 @@
 
 | Riesgo | Probabilidad | Impacto | Mitigación |
 |---|---|---|---|
-| jsQR no funciona en iOS final | Alta | Alto | Implementar BarcodeDetector como alternativa |
+| ~~jsQR no funciona en iOS~~ | Resuelto | jsQR funciona correctamente — el problema era de UX |
 | Firestore sin reglas en producción | Alta | Alto | Agregar reglas antes de despliegue |
 | Datos de sesión en localStorage expuestos | Media | Medio | Firebase Auth real reemplaza esto |
 | CDN de jsQR/QRious no disponible | Baja | Alto | Incluir como archivos locales |
@@ -162,7 +158,7 @@
 | `renderizarCatalogo()` / `renderizarFavoritos()` | Funciones del código base que ya no tienen pantalla activa. Candidatas a eliminar. |
 | Contraseñas en USUARIOS_MOCK | Hardcodeadas en el código fuente. Solo aceptable para demo, no para producción. |
 | `fun alta-foto`, `alta-nombre`, etc. | IDs del formulario de producto legacy comentados en HTML. Pueden eliminarse. |
-| `dbgFrames`, `dbgSinQRTimer` | Variables de debug del escáner. Si el QR se resuelve, revisar si siguen siendo necesarias. |
+| `dbgFrames`, `dbgSinQRTimer`, panel `#escaner-status` | Variables y panel de debug del escáner. QR resuelto — pueden eliminarse o mantenerse como diagnóstico. |
 | Sin paginación | Las listas de clientes, productos y ventas cargan todos los documentos. Problema a escala. |
 
 ---
