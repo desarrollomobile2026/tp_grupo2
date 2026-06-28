@@ -1,384 +1,248 @@
 # Moniarquía — Documento Maestro del Proyecto
 
-> Referencia única para continuar el trabajo sin perder contexto entre sesiones.  
-> Última actualización: Junio 2026
+> Versión: 2.0 — Actualizado: Junio 2026
+> Fuente de verdad única del proyecto. Consultar antes de cualquier sesión de desarrollo.
 
 ---
 
-## 1. DATOS DEL PROYECTO ACADÉMICO
+## 1. Información general
 
-- **Materia:** Desarrollos para Dispositivos Móviles
-- **Institución:** UNPAZ — Comisión C1, 2026
+### Descripción
+
+**Moniarquía** es una Progressive Web App (PWA) para la gestión operativa de un showroom de ropa.
+Permite al equipo del local administrar ventas, inventario, clientes y cuenta corriente desde un dispositivo móvil, sin depender de software de escritorio.
+
+### Contexto
+
+- **Institución:** UNPAZ — Materia: Desarrollos para Dispositivos Móviles, Comisión C1, 2026
 - **Alumno:** Oscar Castelani (castelani83@gmail.com)
-- **Grupo:** Grupo 4 / Grupo 2 (según el repo de GitHub)
+- **Repositorio:** `https://github.com/desarrollomobile2026/tp_grupo2`
+- **Rama de trabajo:** `oscar` (nunca modificar `main`)
 
-### Entregables del TP Integrador (3 pilares)
+### Actores y roles
 
-1. **Prototipo en Figma** — Revisar y completar con coherencia total con los UML
-2. **Diagramas UML** — Actividad y secuencia para al menos 3 casos de uso
-3. **Sitio web en GitHub** — Adaptación del código base a Moniarquía, con Firebase
+| Rol | Permisos |
+|---|---|
+| **Administrador/a** | Acceso completo: ventas, inventario (CRUD), clientes (CRUD), cuenta corriente, configuración, gestión de usuarios |
+| **Empleado/Vendedor/a** | Acceso restringido: iniciar ventas, ver inventario, gestionar stock por talle, ver y crear clientes, cambios y devoluciones |
 
-Gestión del equipo: **Jira** (obligatorio) — tablero con tareas asignadas individualmente.
+La restricción por rol se aplica **visualmente en la interfaz**. Las reglas de seguridad de Firestore aún no están configuradas.
+
+### Stack tecnológico
+
+| Capa | Tecnología |
+|---|---|
+| Frontend | HTML5 + CSS3 + JavaScript vanilla (sin frameworks) |
+| Backend | Firebase Firestore (NoSQL, tiempo real) |
+| Autenticación | Simulada localmente (Firebase Auth no activo) |
+| Almacenamiento | Firebase Storage (eliminado — no se usa) |
+| Íconos | Lucide Icons (CDN) |
+| Fuentes | Inter (body) + Mr Dafoe (logo) — Google Fonts |
+| QR Generator | QRious v4.0.2 (CDN) |
+| QR Reader | jsQR v1.4.0 (CDN) — **pendiente de resolver en iOS** |
 
 ---
 
-## 2. DESCRIPCIÓN DE LA APLICACIÓN
+## 2. Estado actual del proyecto
 
-**Moniarquía** es una aplicación móvil para la gestión de un local de indumentaria (showroom de ropa).
+> Última revisión: Junio 2026
 
-### Funcionalidades
-- Gestión de ventas
-- Gestión de stock / inventario
-- Gestión de clientes
-- Cuenta corriente (deudas y pagos)
-- Gestión de usuarios (roles: administrador / empleado)
-- Cambios y devoluciones
-- Registro de pagos (efectivo, Mercado Pago, cuenta corriente)
-- Autenticación de usuarios
-
-### Stack tecnológico previsto
-- **Frontend móvil:** Por definir
-- **Backend:** Firebase
-- **Base de datos:** Cloud Firestore
-- **Autenticación:** Firebase Authentication
-- **Almacenamiento:** Firebase Storage
-
----
-
-## 3. ARCHIVO FIGMA
-
-- **Nombre:** `tp-avance2-planificacion`
-- **File key:** `lgvsb4okC7eoXqqYNSXj1S`
-- **URL:** `https://www.figma.com/design/lgvsb4okC7eoXqqYNSXj1S/tp-avance2-planificacion`
-- **Frame Design System:** Frame 6, nodo `24-23` (2818×2441 px — "Guía de Diseño")
-- **Modo de acceso de Claude:** Solo lectura. No se edita directamente.
-
-### Pantallas identificadas (21 pantallas)
-
-#### Autenticación
-| Pantalla | Capa Figma |
-|---|---|
-| Splash / Inicio | `Inicio` |
-| Iniciar sesión | `Iniciar sesión` |
-| Registrarse | `Registrarse` |
-| Perfil creado | `Perfil creado` |
-
-#### Flujo principal / Home
-| Pantalla | Capa Figma |
-|---|---|
-| Página de inicio | `Página de inicio` |
-| Menú | `Menu` |
-| Configuración | `Configuracion` |
-
-#### Inventario / Ventas
-| Pantalla | Capa Figma |
-|---|---|
-| Inventario | `Inventario` |
-| Escaneo exitoso | `Escaneo exitoso 1` |
-| Escaneo activo | `Escaneo 2` |
-| Confirmar compra | `Confirmar compra` |
-| Carrito vacío | `Carrito vacío` |
-| Editar producto carrito | `Editar producto carrito` |
-| Eliminar producto carrito | `Eliminar producto carrito` |
-
-#### Clientes / Pagos
-| Pantalla | Capa Figma |
-|---|---|
-| Agregar cliente | `agregar cliente` |
-| Registrar deuda | `Registrar deuda` |
-| Pago Mercado Pago | `Pago Mercado Pago` |
-| Pago aprobado | `Pago aprobado` |
-
-#### Cambios y Devoluciones
-| Pantalla | Capa Figma |
-|---|---|
-| Cambio realizado | `Cambio realizado` |
-
-### Flujo de navegación
-```
-Splash / Inicio
-    ├── Iniciar sesión ──► Página de inicio
-    └── Registrarse ──► Perfil creado ──► Página de inicio
-
-Página de inicio
-    ├── Inventario ──► Escaneo ──► Escaneo exitoso ──► Confirmar compra ──► Pago
-    ├── Agregar cliente ──► formulario ──► confirmación
-    ├── Registrar deuda ──► Cuenta corriente
-    └── Configuración / Menú
-```
-
-### Patrones UX observados
-- Navegación: bottom navigation o menú hamburguesa (capa "Menu")
-- Flujo de venta: lineal (scan → confirmar → pago)
-- Confirmaciones: pantallas de estado (éxito / error) con botón de retorno
-- Formularios: inputs estándar con validación visual
-- Diseñado para uso con una sola mano, en entorno comercial
-
----
-
-## 4. DESIGN SYSTEM
-
-Modo de análisis: lectura del Frame 6 (`node-id=24-23`) en Figma. Colores confirmados desde el inspector de propiedades y color picker.
-
-### 4.1 Paleta de colores
-
-Todos los colores están definidos como **Variables** en el panel "Bibliotecas" del archivo.
-
-| Variable | Hex | Uso principal |
+| Módulo | Estado | Notas |
 |---|---|---|
-| **Negro pleno** | `#000000` | Textos, íconos |
-| **gris** | `#5A5A5A` | Textos secundarios, placeholders |
-| **Rojo** | `#FF6677` | Botones CTA primarios, color marca |
-| **Rosa** | `#FFDFDF` | Fondos de cards, hover |
-| **Rosa viejo** | ~`#FF8C98` | Acciones secundarias ⚠️ estimado |
-| **Bordó** | ~`#8B0000` | Acento de marca ⚠️ estimado |
-| **Blanco** | `#FFFFFF` | Fondos de pantalla |
-| **Verde / Verde-ok** | `#41EC58` | Éxito, confirmaciones |
+| **Autenticación** | ⚠️ Simulada | Login/registro funcionan con datos mock. Firebase Auth está revertido. |
+| **Home / Inicio** | ✅ Completo | Logo, menú hamburguesa, dos cards de acción, avatar de perfil. |
+| **Inventario** | ✅ Completo | CRUD completo, búsqueda, filtros por categoría, talles por categoría. |
+| **Escaneo de cámara** | ⚠️ Parcial | Cámara abre correctamente. jsQR integrado pero lectura QR no confirmada en iPhone. |
+| **Carrito de venta** | ✅ Completo | Selección de producto, talle, color, cantidad. Persiste en localStorage. |
+| **Ventas** | ✅ Completo | Registro en Firestore, 3 métodos de pago, descuento de stock atómico. |
+| **Clientes** | ✅ Completo | Lista, alta, edición, eliminación con confirmación. |
+| **Cuenta corriente** | ✅ Completo | Detalle del cliente, historial de movimientos, pagos completos y parciales. |
+| **Pagos** | ✅ Completo | Efectivo, Mercado Pago, Cuenta corriente. Mercado Pago no integra API (solo se confirma externamente). |
+| **Cambios y devoluciones** | ⚠️ Parcial | Solo cambio de talle del mismo producto. Cambio por otro producto pendiente. |
+| **Configuración** | ✅ Completo | Pantalla con 5 opciones: Mi perfil, Gestión de usuarios, Gestión de clientes, Cambiar contraseña, Cerrar sesión. |
+| **Gestión de usuarios** | ⚠️ Mock | Flujo visual completo (CRUD) pero con datos locales. No conectado a Firestore. |
+| **Mi perfil / Cambiar contraseña** | ⚠️ Mock | Funcionalidad visual completa, no conectada a Firebase Auth. |
+| **QR — Generación** | ✅ Completo | Se genera y guarda `codigoQR` en Firestore. Se visualiza y descarga en PDF. |
+| **QR — Lectura/Escaneo** | ❌ Pendiente | Loop implementado, no funciona en iPhone. Ver `docs/MONIARQUIA_QR.md`. |
+| **Permisos por rol** | ✅ Completo | Restricciones visuales aplicadas en inventario, clientes y configuración. |
+| **Responsividad** | ✅ Completo | Corregida para múltiples tamaños de pantalla (dvh, clamp). |
+| **Navegación con historial** | ✅ Completo | Stack de historial, botón volver inteligente. |
 
-> ⚠️ Bordó y Rosa viejo son valores aproximados. Confirmar habilitando Figma Dev Mode MCP (Figma Desktop → Preferencias → Enable Dev Mode MCP Server → reiniciar Claude).
+---
 
-Fondo del frame Design System: `#DEDEDE` (uso interno, no es un token de la app).
+## 3. Base de datos Firestore
 
-#### Tokens → CSS
-```css
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+### Colecciones activas
 
-:root {
-  --color-negro:     #000000;
-  --color-gris:      #5A5A5A;
-  --color-rojo:      #FF6677;
-  --color-rosa:      #FFDFDF;
-  --color-blanco:    #FFFFFF;
-  --color-verde:     #41EC58;
-  --font-base:       'Inter', sans-serif;
+#### `/productos/{productoId}`
+
+```js
+{
+  nombre:       string,          // "Campera frizada"
+  precio:       number,          // 38000
+  categoria:    string,          // "Camperas" | "Remeras" | "Pantalones" | "Buzos" | "Shorts"
+  colores:      string[],        // ["negro", "gris"]  — valores del selector predefinido
+  descripcion:  string,          // "Manga larga, suave y frizada."
+  foto_url:     string,          // URL de imagen (manual) o ""
+  stockPorTalla: {               // mapa de talle → cantidad
+    S: number, M: number, L: number, XL: number   // o 36, 38, 40, 42, 44 para pantalones
+  },
+  tallas:       string[],        // talles con stock > 0
+  stock:        number,          // total de todas las tallas
+  codigoQR:     string,          // "MONIARQUIA_PRODUCTO_<id>"  — agregado Jun 2026
+  likes:        number,          // sistema heredado del código base (no se usa visualmente)
+  createdAt:    timestamp
 }
 ```
 
-#### Tokens → Android / Compose
-```kotlin
-object MoniarquiaColors {
-    val NegroPLeno = Color(0xFF000000)
-    val Gris       = Color(0xFF5A5A5A)
-    val Rojo       = Color(0xFFFF6677)
-    val Rosa       = Color(0xFFFFDFDF)
-    val Blanco     = Color(0xFFFFFFFF)
-    val Verde      = Color(0xFF41EC58)
-    // Rosa viejo y Bordó: verificar hex exacto
+**Talles por categoría:**
+- Remeras, Camperas, Buzos → `S, M, L, XL`
+- Pantalones, Shorts → `36, 38, 40, 42, 44`
+
+#### `/ventas/{ventaId}`
+
+```js
+{
+  clienteId:    string | null,   // ref a /clientes o null si venta anónima
+  items: [{
+    productoId:     string,
+    nombre:         string,
+    talla:          string,
+    color:          string,
+    cantidad:       number,
+    precioUnitario: number,
+    subtotal:       number
+  }],
+  total:        number,
+  metodoPago:   "efectivo" | "mercadopago" | "cuenta_corriente",
+  estado:       "completada" | "deuda",
+  montoAbonado: number,
+  fecha:        timestamp
 }
 ```
 
-### 4.2 Tipografía
+#### `/clientes/{clienteId}`
 
-**Familia:** Inter — disponible en Google Fonts.  
-**Peso predominante detectado:** Semi Bold.
-
-| Estilo | Tamaño | Interlineado | Uso |
-|---|---|---|---|
-| Logo | 58px | 72px | Logotipo, splash |
-| Títulos | 24px | 32px | Títulos de sección |
-| Subtítulos | 20px | Auto | Subtítulos de cards |
-| Botones | 24px | 24px | Texto de CTAs |
-| Textos | 16px | Auto | Cuerpo, descripciones |
-| Placeholder | 14px | Auto | Placeholders de inputs |
-| Texto chico | 12px | 20px | Etiquetas, chips |
-| Texto chico 2 | 12px | 32px | Variante de texto chico |
-
-> ⚠️ El logotipo "Moniarquía" usa una tipografía script/cursiva diferente a Inter. Identificada como estilo "Logo" pero con fuente distinta. Requiere verificación.
-
-#### Escala → Android / Compose
-```kotlin
-object MoniarquiaType {
-    val Logo      = TextStyle(fontSize = 58.sp, lineHeight = 72.sp)
-    val Titulo    = TextStyle(fontSize = 24.sp, lineHeight = 32.sp)
-    val Subtitulo = TextStyle(fontSize = 20.sp)
-    val Boton     = TextStyle(fontSize = 24.sp, lineHeight = 24.sp)
-    val Texto     = TextStyle(fontSize = 16.sp)
-    val Placeholder = TextStyle(fontSize = 14.sp)
-    val TextoChico  = TextStyle(fontSize = 12.sp, lineHeight = 20.sp)
+```js
+{
+  nombre:     string,
+  telefono:   string,
+  email:      string,
+  deudaTotal: number,   // actualizado atómicamente con FieldValue.increment
+  createdAt:  timestamp
 }
 ```
 
-### 4.3 Componentes (31 total en el archivo)
+#### `/cuentaCorriente/{registroId}`
 
-#### Botones
-| Variante | Estilo | Fondo | Texto | Uso |
-|---|---|---|---|---|
-| Primario grande | Filled, rounded | `#FF6677` | `#FFFFFF` | "Iniciar venta", "Iniciar sesión" |
-| Primario normal | Filled, rounded | `#FF6677` | `#FFFFFF` | "Nueva venta", "Siguiente" |
-| Secundario | Outline | Transparente | `#FF6677` | "Volver al inicio", "Escanear otro" |
-| Confirmación | Filled, rounded | `#41EC58` | `#FFFFFF` | "Entendido" |
-| Registro | Outline / ghost | Transparente | `#000000` | "Registrarse" |
-| Link de acción | Sin borde | Transparente | variable | "Cuenta corriente" |
+```js
+{
+  clienteId:   string,   // ref a /clientes
+  tipo:        "deuda" | "pago",
+  monto:       number,
+  descripcion: string,   // "Venta registrada" | "Pago registrado"
+  ventaId:     string,   // ref a /ventas (solo en deudas)
+  fecha:       timestamp
+}
+```
 
-> Radio de esquina: estimado 8–12px. Padding: por confirmar en Dev Mode.
+#### `/cambios/{cambioId}`
 
-#### Inputs
-- Bordes definidos, placeholder en `#5A5A5A`
-- Estados: normal, activo (borde rosa), error
+```js
+{
+  ventaId:        string,
+  productoId:     string,
+  nombreProducto: string,
+  talleDevuelto:  string,
+  talleNuevo:     string,
+  clienteId:      string | null,
+  fecha:          timestamp
+}
+```
 
-#### Cards de producto
-- Imagen + nombre + precio
-- Selector de talla/color
-- Botón de cantidad (+/−)
-- Precio total destacado en `#FF6677`
+### Colecciones definidas pero no activas
 
-#### Items de lista
-- Filas con imagen miniatura, nombre, precio, SKU
-- Swipe actions implícitas (editar, eliminar)
-
-#### Modales / Bottom sheets
-- Confirmación de compra
-- Estado vacío (carrito vacío)
-
-### 4.4 Iconos
-
-**Librería:** [Lucide Icons](https://lucide.dev/)
-
-| Ícono | Uso |
+| Colección | Estado |
 |---|---|
-| `archive-restore` | Cambios y devoluciones |
-| `users` | Gestión de clientes |
-| `lock-keyhole` | Autenticación / login |
-| `search` | Buscador de inventario |
-| `shopping-cart` | Ventas / carrito |
-| `package` | Inventario / stock |
-| `check-circle` | Confirmación / éxito |
-| `triangle-warning` | Error / advertencia |
-| `chevron-left` | Navegar hacia atrás |
-| `menu` | Menú hamburguesa |
-| `user` | Perfil de usuario |
+| `/usuarios` | Definida en el modelo. No se escribe (auth revertida). Gestión de usuarios usa datos mock. |
 
-```html
-<!-- Web — CDN -->
-<script src="https://unpkg.com/lucide@latest"></script>
-<i data-lucide="shopping-cart"></i>
+### Relaciones entre colecciones
+
+```
+/ventas  →  clienteId  →  /clientes
+/ventas  →  items[].productoId  →  /productos
+/cuentaCorriente  →  clienteId  →  /clientes
+/cuentaCorriente  →  ventaId  →  /ventas
+/cambios  →  productoId  →  /productos
+/cambios  →  ventaId  →  /ventas
 ```
 
 ---
 
-## 5. SITIO WEB (TP Integrador)
+## 4. Decisiones técnicas importantes
 
-### Repositorio
-- **URL:** `https://github.com/desarrollomobile2026/tp_grupo2`
-- **Stack:** HTML5 + CSS3 + JS vanilla + Firebase Firestore SDK compat v10.7.1
+### Firebase como backend
 
-### Estructura del código base
-```
-index.html   ← vistas, navegación, modales
-style.css    ← estilos mobile-first
-app.js       ← lógica de UI, carrito, Firestore
-config.js    ← credenciales Firebase (completar con las del grupo)
-README.md
-```
+Firebase permite desplegar sin servidor propio, tiene integración nativa con Firestore en tiempo real (`onSnapshot`), y el SDK compat v10 es compatible con el enfoque vanilla JS del proyecto.
 
-### Funcionalidades implementadas (estado actual — Junio 2026)
+### QRious para generación de QR
 
-| Módulo | Estado |
+18 KB minificado. Genera en canvas localmente sin llamadas externas. Simple API de una línea. Ver `docs/MONIARQUIA_QR.md` para detalles.
+
+### jsQR para lectura de QR
+
+Biblioteca pura JavaScript que trabaja con `ImageData` del canvas. Alternativa a `BarcodeDetector` nativa (no disponible en iOS < 17). **Estado actual: implementado pero no funcional en iPhone.** Ver `docs/MONIARQUIA_QR.md`.
+
+### Autenticación simulada (no Firebase Auth)
+
+Firebase Auth fue implementado y luego revertido por problemas de configuración en la consola. Se reemplazó por un sistema simulado con:
+- Datos mock hardcodeados (`USUARIOS_MOCK`)
+- Sesión en localStorage (`moniarquia_session`)
+- Sin tokens reales
+
+El código tiene comentarios `// TODO: reemplazar por firebase.auth()...` en cada función para facilitar la integración futura.
+
+### Carrito temporal en localStorage
+
+El carrito de venta (`carritoVenta`) se persiste en localStorage con clave `moniarquia_carrito_venta`. Esto permite que el vendedor no pierda los productos si recarga accidentalmente. El carrito del código base original (`moniarquia_cart_v1`) se conservó sin tocar.
+
+### Cuenta corriente como método de pago
+
+En lugar de integrar una pasarela de pago real, se implementó un sistema de deuda donde el cliente se lleva el producto y paga después. La deuda se registra en `/cuentaCorriente` y el `deudaTotal` se actualiza con `FieldValue.increment()` (operación atómica).
+
+### Gestión de stock atómica
+
+Al registrar una venta, el descuento de stock se hace en un `batch.commit()` junto con el registro de la venta. Si alguna operación falla, toda la transacción se revierte. Esto evita inconsistencias entre stock y ventas.
+
+---
+
+## 5. Problemas conocidos
+
+| Problema | Impacto | Estado |
+|---|---|---|
+| **Escaneo QR no funcional en iPhone** | Alto — impide el flujo principal de venta por QR | Pendiente (ver `docs/MONIARQUIA_QR.md`) |
+| **Firebase Auth no activo** | Alto — autenticación es simulada, sin seguridad real | Pendiente (requiere activar en consola) |
+| **Gestión de usuarios con datos mock** | Medio — los usuarios creados no persisten en Firestore | Pendiente |
+| **Cambio por otro producto no implementado** | Bajo — solo se puede cambiar de talle del mismo producto | Pendiente |
+| **Configuración de usuarios sin conectar** | Bajo — pantalla visual pero sin funcionalidad real | Pendiente |
+| **Firebase Storage eliminado** | Informativo — las imágenes se cargan por URL manual | No hay plan de reimplementar por ahora |
+| **Reglas de Firestore abiertas** | Alto (producción) — aceptable para desarrollo/TP | Documentar antes de producción |
+| **Recuperación de contraseña sin backend** | Medio — flujo visual pero sin envío real de email | Requiere Firebase Auth activo |
+
+---
+
+## 6. Documentación relacionada
+
+| Archivo | Contenido |
 |---|---|
-| Home + menú hamburguesa + navegación con historial | ✅ |
-| Inventario (CRUD, búsqueda, filtros, talles dinámicos por categoría) | ✅ |
-| Escaneo simulado (cámara con getUserMedia) → flujo manual | ✅ |
-| Flujo de venta completo (selección → carrito → pagos) | ✅ |
-| Clientes (lista, alta, buscador, selección en venta) | ✅ |
-| Registro de ventas en Firestore (Efectivo, Mercado Pago, Cuenta corriente) | ✅ |
-| Cuenta corriente (detalle, movimientos, historial, pagos) | ✅ |
-| Cambios y devoluciones (cambio de talle, actualización stock) | ✅ parcial |
-| Autenticación (splash, login, registro, onAuthStateChanged) | ❌ revertido |
-| Configuración de usuarios | ❌ no implementado |
-
-### Colecciones Firebase activas
-
-- `/productos` — onSnapshot en tiempo real
-- `/clientes` — onSnapshot en tiempo real
-- `/ventas` — lectura y escritura
-- `/cuentaCorriente` — lectura y escritura
-- `/cambios` — solo escritura
-- `/usuarios` — no activa (auth revertida)
-
-### Firebase Storage
-
-- `storageBucket` configurado en `config.js` pero SDK no cargado.
-- La carga de imágenes desde dispositivo fue revertida.
-- Las imágenes se manejan via `foto_url` (URL manual) o mapeo local por nombre en `obtenerFotoProducto()`.
-
-### Pendiente para la entrega
-
-1. **Autenticación** — splash, login, registro (uno de los 3 pilares del TP)
-2. **Diagramas UML** — actividad y secuencia para al menos 3 casos de uso
-3. **Prototipo Figma** — revisar coherencia visual con lo implementado
-
-### Nota sobre campo de imagen en productos
-
-El modelo de datos define `imagen: string (Storage URL)` pero el código usa `foto_url`. Ambos se leen como fallback en `obtenerFotoProducto()`. Para nuevos productos creados en la app, el campo guardado es `foto_url`.
+| `docs/MONIARQUIA_Flujos.md` | Todos los flujos de navegación con diagramas textuales |
+| `docs/MONIARQUIA_ESTADO_ACTUAL.md` | Resumen ejecutivo con prioridades |
+| `docs/MONIARQUIA_FIREBASE.md` | Configuración, colecciones, datos de prueba |
+| `docs/MONIARQUIA_DESIGN_SYSTEM.md` | Tokens de color, tipografía, componentes, UX |
+| `docs/MONIARQUIA_QR.md` | Bitácora técnica completa del sistema QR |
+| `docs/MONIARQUIA_ROADMAP.md` | Hoja de ruta con prioridades |
+| `docs/00_REGLAS_DESARROLLO.md` | Metodología de trabajo, rama, etapas |
 
 ---
 
-## 6. MODELO DE DATOS FIRESTORE
-
-```
-/usuarios/{userId}
-  - email: string
-  - nombre: string
-  - rol: "administrador" | "empleado"
-  - createdAt: timestamp
-
-/productos/{productoId}
-  - nombre: string
-  - precio: number
-  - stock: number
-  - tallas: string[]
-  - colores: string[]
-  - imagen: string (Storage URL)
-  - codigoBarras: string
-  - categoria: string
-  - createdAt: timestamp
-
-/ventas/{ventaId}
-  - clienteId: string (ref)
-  - empleadoId: string (ref)
-  - items: [{productoId, cantidad, talla, color, precioUnitario}]
-  - total: number
-  - metodoPago: "efectivo" | "mercadopago" | "cuenta_corriente"
-  - estado: "completada" | "cancelada"
-  - fecha: timestamp
-
-/clientes/{clienteId}
-  - nombre: string
-  - telefono: string
-  - email: string
-  - deudaTotal: number
-  - createdAt: timestamp
-
-/cuentaCorriente/{registroId}
-  - clienteId: string (ref)
-  - tipo: "deuda" | "pago"
-  - monto: number
-  - descripcion: string
-  - ventaId: string (ref, opcional)
-  - fecha: timestamp
-```
-
----
-
-## 7. INSTRUCCIONES PARA CLAUDE
-
-1. **Figma es read-only.** Generar specs de implementación para que el diseñador las aplique. No intentar editar el archivo.
-2. **Design System es la fuente de verdad.** Usar siempre los tokens de color y tipografía de la sección 4.
-3. **No generar cambios destructivos.** No eliminar ni modificar pantallas o flujos aprobados.
-4. **Bordó y Rosa viejo son estimaciones.** Verificar activando Figma Dev Mode MCP.
-5. **Para el sitio web:** la consigna pide adaptación, no reescritura. Partir del código base de `tp_grupo2`.
-6. **Pensar siempre en Firebase.** Cualquier funcionalidad nueva debe considerar colección/documento, validaciones y reglas de seguridad.
-7. **Cuando se pida una nueva pantalla:** generar specs detalladas (estructura del frame, componentes a reutilizar, jerarquía visual, espaciados, estados, comportamiento) sin asumir que se puede editar Figma directamente.
-
-### Valores pendientes de verificar en Dev Mode
-1. Hex exacto de **Bordó** (~#8B0000)
-2. Hex exacto de **Rosa viejo** (~#FF8C98)
-3. Pesos tipográficos específicos por estilo
-4. Radio de esquina de botones (estimado: 8–12px)
-5. Padding interno de botones y cards
-6. Distinción entre variables "Verde", "verde" y "Verde-ok"
-7. Fuente exacta del logotipo "Moniarquía"
-
----
-
-*Documento unificado. Junio 2026.*
+*Documento maestro — Junio 2026. Actualizar al iniciar cada nueva sesión de desarrollo importante.*

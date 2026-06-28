@@ -1,5 +1,8 @@
 # Moniarquía — Flujos y navegación entre pantallas
 
+> Versión: 2.0 — Actualizado: Junio 2026.
+> Incluye todos los flujos implementados en la app actual (52 vistas, rama `oscar`).
+
 ---
 
 ## 1. Flujo de acceso
@@ -331,3 +334,209 @@ El acceso principal vive en el menú hamburguesa porque es una acción secundari
 - Buscar nuevo producto
 - Confirmar cambio
 - Cambio realizado
+
+---
+
+## 17. Flujo QR — Generar y descargar etiqueta
+
+**Estado:** ✅ Implementado
+
+**Objetivo:** Crear y descargar la etiqueta QR de un producto para pegar en la prenda física.
+
+```
+Inventario
+↓ Tocar ícono editar (admin)
+↓ Formulario de edición del producto
+↓ Sección "Código QR del producto" (visible al editar)
+↓ Canvas con el QR generado por QRious
+↓ Texto: MONIARQUIA_PRODUCTO_<idFirestore>
+↓ Botón "Descargar QR"
+↓ Descarga PNG 300px — archivo: qr-<nombre>.png
+```
+
+**Datos involucrados:**
+- `codigoQR` guardado en `/productos/{id}.codigoQR`
+- Se genera automáticamente al crear el producto (usando el ID de Firestore)
+- Al editar: si no tiene `codigoQR`, se genera con su ID actual
+
+**Funciones:** `renderizarQRProducto(codigoQR)`, `descargarQRProducto(codigoQR, nombre)`, `guardarProducto(e)`
+
+---
+
+## 18. Flujo QR — Escanear y abrir producto
+
+**Estado:** ⚠️ Implementado, no funcional en iPhone (ver `docs/MONIARQUIA_QR.md`)
+
+**Objetivo:** Escanear el QR de una prenda para abrir directamente su pantalla de selección.
+
+```
+Home → "Iniciar venta"        ← abrirEscaneo()
+  O
+Carrito → "Escanear otro"     ← abrirEscaneo('carrito')
+↓
+#vista-escanear
+  - Video de cámara
+  - Panel de estado (CAM / LOOP / FRAMES / QR / DB / ERR)
+  - Botón: Reintentar escaneo
+  - Botón: Buscar manualmente
+  - Botón: Volver al carrito (solo desde carrito)
+↓ jsQR detecta: MONIARQUIA_PRODUCTO_<id>
+↓ procesarCodigoQR(texto)
+↓ Buscar en listaPrendasGlobal (memoria)
+  → Si existe: abrirProducto(id)
+  → Si no: buscar en Firestore → abrirProducto(id)
+↓ #vista-producto (seleccionar color, talle, cantidad)
+↓ Agregar al carrito
+↓ #vista-carrito-venta
+```
+
+**Funciones:** `abrirEscaneo(origen)`, `iniciarCamara()`, `iniciarEscaneoLoop()`, `procesarCodigoQR(texto)`, `reintentarEscaneo()`, `buscarManualmente()`, `volverAlCarritoDesdeEscaneo()`
+
+---
+
+## 19. Flujo de Configuración
+
+**Estado:** ✅ Implementado
+
+```
+Menú hamburguesa → Configuración
+↓
+#vista-configuracion
+  ├── Mi perfil → #vista-mi-perfil
+  │     └── Editar perfil → #vista-editar-perfil → éxito
+  ├── Gestión de usuarios → #vista-gestion-usuarios
+  │     ├── Crear usuario → #vista-crear-usuario → éxito
+  │     ├── Editar usuario → #vista-editar-usuario → éxito
+  │     ├── Cambiar rol → #vista-cambiar-rol → éxito
+  │     ├── Confirmar activar/desactivar/eliminar → #vista-confirmar-usuario → éxito
+  │     └── #vista-exito-usuario
+  ├── Gestión de clientes → #vista-clientes (módulo existente)
+  ├── Cambiar contraseña → #vista-cambiar-password → éxito
+  └── Cerrar sesión → Limpia sesión → #vista-splash
+```
+
+**Restricciones por rol:**
+- "Gestión de usuarios" oculto para empleados (CSS `.solo-admin` + `irAGestionUsuarios()` con check)
+
+---
+
+## 20. Flujo de Gestión de usuarios
+
+**Estado:** ⚠️ Visual completo, datos en memoria (no Firestore)
+
+```
+Configuración → Gestión de usuarios
+↓
+Lista de usuarios (con badges: rol + estado)
+  Acciones por usuario: editar / cambiar rol / activar-desactivar / eliminar
+↓ Crear usuario
+  ↓ Formulario: nombre, correo, rol
+  ↓ Guardar → agrega a usuariosLocales[] (no Firestore aún)
+  ↓ Éxito
+↓ Editar usuario
+  ↓ Formulario precargado
+  ↓ Guardar → actualiza usuariosLocales[]
+  ↓ Éxito
+↓ Cambiar rol
+  ↓ Selector de rol
+  ↓ Confirmar → actualiza usuariosLocales[]
+  ↓ Éxito
+↓ Activar/Desactivar/Eliminar
+  ↓ Pantalla de confirmación dinámica
+  ↓ Confirmar → actualiza usuariosLocales[]
+  ↓ Éxito
+```
+
+**TODO:** Reemplazar `usuariosLocales[]` por `db.collection('usuarios')` cuando Firebase Auth esté activo.
+
+---
+
+## 21. Flujo Mi perfil
+
+**Estado:** ⚠️ Visual completo, datos en `usuarioActual` (no Firebase Auth)
+
+```
+Configuración → Mi perfil
+↓
+#vista-mi-perfil
+  - Avatar con inicial
+  - Nombre, correo, rol, estado
+  - Botón "Editar perfil" (al fondo, thumb zone)
+↓ Editar perfil
+  ↓ Formulario: nombre, correo
+  ↓ Guardar → actualiza usuarioActual + avatar del Home
+  ↓ Éxito → "Volver a Mi perfil" | "Ir a Configuración"
+```
+
+---
+
+## 22. Flujo de autenticación (simulado)
+
+**Estado:** ⚠️ Funcional con datos mock, no conectado a Firebase Auth
+
+```
+Splash
+  ├── Iniciar sesión
+  │     ↓ Email + contraseña
+  │     ↓ Validar contra USUARIOS_MOCK
+  │     ↓ OK → guardar en localStorage → Home
+  │     ↓ Error → "Usuario o contraseña incorrectos"
+  └── Registrarse
+        ↓ Nombre + email + contraseña × 2
+        ↓ Validar campos + longitud
+        ↓ OK → Perfil creado (solo visual)
+        ↓ Botones: Iniciar sesión | Volver al inicio
+
+Recuperar contraseña
+  ↓ Email
+  ↓ OK → Correo enviado (solo visual)
+  ↓ Crear nueva contraseña → Contraseña actualizada (solo visual)
+
+Cerrar sesión
+  ↓ Limpia carritoVenta, clienteSeleccionado, historialNavegación
+  ↓ Borra localStorage (moniarquia_session)
+  ↓ Navega al Splash
+```
+
+---
+
+## Mapa de vistas completo (52 vistas)
+
+### Autenticación
+`vista-splash` → `vista-login` → `vista-registro` → `vista-perfil-creado`
+`vista-recuperar-password` → `vista-correo-enviado` → `vista-nueva-password` → `vista-password-actualizada`
+
+### Principal
+`vista-home`
+
+### Inventario
+`vista-inventario` → `vista-form-producto` → `vista-confirmar-eliminar`
+`vista-gestionar-stock` (empleados)
+
+### Flujo de venta
+`vista-escanear` → `vista-seleccionar-producto` → `vista-producto`
+`vista-carrito-venta` → `vista-asociar-cliente` → `vista-seleccionar-cliente`
+`vista-agregar-cliente` → `vista-cliente-agregado`
+`vista-metodo-pago` → `vista-confirmar-pago` | `vista-registrar-deuda`
+`vista-pago-registrado` | `vista-deuda-registrada`
+
+### Clientes
+`vista-clientes` → `vista-editar-cliente` → `vista-confirmar-eliminar-cliente`
+`vista-detalle-cliente` → `vista-historial-cliente` | `vista-historial-compras`
+`vista-registrar-pago` → `vista-pago-cliente-ok`
+
+### Cambios y devoluciones
+`vista-cambios` → `vista-items-venta` → `vista-seleccionar-talle` → `vista-confirmar-cambio` → `vista-cambio-realizado`
+
+### Configuración
+`vista-configuracion`
+`vista-mi-perfil` → `vista-editar-perfil` → `vista-exito-perfil`
+`vista-cambiar-password` → `vista-exito-password`
+`vista-gestion-usuarios` → `vista-crear-usuario` | `vista-editar-usuario` | `vista-cambiar-rol` | `vista-confirmar-usuario` → `vista-exito-usuario`
+
+### Legacy (en DOM, sin acceso visual)
+`vista-carrito` (código base original)
+
+---
+
+*Flujos — Junio 2026.*
