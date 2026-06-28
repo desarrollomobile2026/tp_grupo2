@@ -26,6 +26,78 @@ const USUARIOS_MOCK = [
 
 let sesionActual = null; // { nombre, correo, rol } — NO se guarda la contraseña
 
+// ── CONFIGURACIÓN: ALERTAS DE STOCK BAJO ────────────────────────────────────
+const CONFIG_STOCK_KEY = 'moniarquia_config_stock';
+let configStock = { activo: true, stockMinimo: 3 };
+
+function cargarConfigStock() {
+    try {
+        const guardada = localStorage.getItem(CONFIG_STOCK_KEY);
+        if (guardada) configStock = { ...configStock, ...JSON.parse(guardada) };
+    } catch { configStock = { activo: true, stockMinimo: 3 }; }
+}
+
+function guardarConfigStock() {
+    localStorage.setItem(CONFIG_STOCK_KEY, JSON.stringify(configStock));
+}
+
+function calcularAlertasStock() {
+    if (!configStock.activo) return [];
+    const alertas = [];
+    listaPrendasGlobal.forEach(p => {
+        const talles = TALLES_POR_CATEGORIA[p.categoria] || TALLAS_INV;
+        const stockPorTalla = p.stockPorTalla || {};
+        talles.forEach(t => {
+            const cant = stockPorTalla[t] ?? 0;
+            if (cant <= configStock.stockMinimo) {
+                alertas.push({ nombre: p.nombre, talle: t, cantidad: cant });
+            }
+        });
+    });
+    return alertas;
+}
+
+function renderizarAlertasHome() {
+    const contenedor = document.getElementById('home-alertas-stock');
+    const lista      = document.getElementById('home-alertas-lista');
+    if (!contenedor || !lista) return;
+    const alertas = calcularAlertasStock();
+    if (alertas.length === 0) { contenedor.style.display = 'none'; return; }
+    lista.innerHTML = alertas
+        .map(a => `<p class="home-alerta-item"><strong>${a.nombre}</strong> — Talle ${a.talle}: ${a.cantidad} ${a.cantidad === 1 ? 'unidad' : 'unidades'}</p>`)
+        .join('');
+    contenedor.style.display = 'flex';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function abrirConfigStock() {
+    if (!esAdmin()) return;
+    const toggleEl = document.getElementById('config-stock-activo');
+    const minimoEl = document.getElementById('config-stock-minimo');
+    const filaMin  = document.getElementById('config-stock-min-fila');
+    if (toggleEl) {
+        toggleEl.checked  = configStock.activo;
+        toggleEl.onchange = () => {
+            if (filaMin) filaMin.style.opacity = toggleEl.checked ? '1' : '0.45';
+        };
+    }
+    if (minimoEl) minimoEl.value = configStock.stockMinimo;
+    if (filaMin) filaMin.style.opacity = configStock.activo ? '1' : '0.45';
+    navegarA('vista-config-stock');
+}
+
+function guardarConfigStockForm() {
+    if (!esAdmin()) return;
+    const toggleEl = document.getElementById('config-stock-activo');
+    const minimoEl = document.getElementById('config-stock-minimo');
+    const minimo   = Math.max(1, Math.min(99, parseInt(minimoEl?.value) || 3));
+    configStock    = { activo: toggleEl?.checked ?? true, stockMinimo: minimo };
+    guardarConfigStock();
+    renderizarAlertasHome();
+    renderizarInventario();
+    volverAtras();
+}
+
 // ── HELPERS DE PERMISOS ──────────────────────────────────────────────────────
 function esAdmin() {
     return (sesionActual?.rol || '') === 'administrador';
@@ -101,6 +173,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnVolver = document.getElementById('btn-volver');
     if (btnVolver) btnVolver.style.visibility = 'hidden';
 
+    // Cargar configuración de alertas de stock (localStorage, sincrónico)
+    cargarConfigStock();
+
     // Iniciar app: verificar sesión guardada
     iniciarApp();
 
@@ -122,6 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderizarFavoritos();
         renderizarInventario();
         renderizarSelectorProductos();
+        renderizarAlertasHome();
     }, (error) => {
         console.error("Error al escuchar Firestore:", error);
     });
@@ -841,11 +917,15 @@ function renderizarInventario() {
 
         const tallasParaMostrar = TALLES_POR_CATEGORIA[p.categoria] || TALLAS_INV;
         const total = tallasParaMostrar.reduce((s, t) => s + (stockPorTalla[t] || 0), 0);
-        const tallasHTML = tallasParaMostrar.map(t => `
-            <span class="inv-talla-chip">
+        const tallasHTML = tallasParaMostrar.map(t => {
+            const cant   = stockPorTalla[t] ?? 0;
+            const alerta = configStock.activo && cant <= configStock.stockMinimo;
+            return `
+            <span class="inv-talla-chip${alerta ? ' inv-chip-alerta' : ''}">
                 <span>${t}</span>
-                <em>${stockPorTalla[t] ?? 0}</em>
-            </span>`).join('') + `
+                <em>${cant}</em>
+            </span>`;
+        }).join('') + `
             <span class="inv-talla-chip inv-chip-total">
                 <span>Total</span>
                 <em>${total}</em>
