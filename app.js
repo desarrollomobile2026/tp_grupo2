@@ -48,7 +48,30 @@ function verificarPermisoAccion(accion) {
 let historialNavegacion = [];
 
 // Stream de cámara activo (escaneo)
-let streamCamara = null;
+let streamCamara  = null;
+let scanningLoop  = null;   // ID del requestAnimationFrame del loop QR
+let escaneandoQR  = false;  // evita procesar el mismo QR más de una vez
+
+// Debug del escáner — panel fixed en pantalla para diagnóstico en dispositivo real
+let dbgFrames      = 0;
+let dbgSinQRTimer  = null;
+let qrProcesando   = false; // evita lecturas duplicadas
+let origenEscaneo  = null;  // 'carrito' | null
+
+function actualizarDebugEscaneo(campo, valor) {
+    const mapa = {
+        camara:    'est-camara',
+        loop:      'est-loop',
+        frames:    'est-frames',
+        jsqr:      'est-camara',   // jsQR se muestra en cámara si no hay elemento propio
+        qr:        'est-qr',
+        firestore: 'est-db',
+        error:     'est-error',
+    };
+    const el = document.getElementById(mapa[campo] || campo);
+    if (el) el.textContent = String(valor);
+    console.log(`[ESC:${campo}]`, valor);
+}
 
 // Estado del flujo de venta (Etapa 3)
 let carritoVenta = JSON.parse(localStorage.getItem('moniarquia_carrito_venta')) || [];
@@ -976,6 +999,73 @@ document.addEventListener('click', (e) => {
     }
 }, true);
 
+function renderizarQRProducto(codigoQR) {
+    const section = document.getElementById('qr-producto-section');
+    const canvas  = document.getElementById('qr-canvas');
+    const texto   = document.getElementById('qr-codigo-texto');
+
+    if (!section || !canvas) return;
+
+    section.style.display = codigoQR ? 'flex' : 'none';
+    if (!codigoQR) return;
+
+    if (texto) texto.textContent = codigoQR;
+
+    if (typeof QRious !== 'undefined') {
+        new QRious({
+            element:    canvas,
+            value:      codigoQR,
+            size:       160,
+            background: '#FFFFFF',
+            foreground: '#000000',
+            level:      'M'
+        });
+    } else {
+        console.warn('QRious no está disponible. Verificá la carga del CDN.');
+    }
+
+    // Conectar el botón de descarga con el codigoQR actual
+    const btnDesc = document.getElementById('btn-descargar-qr');
+    if (btnDesc) {
+        btnDesc.onclick = () => {
+            const nombre = (document.getElementById('inv-nombre')?.value || 'producto').trim();
+            descargarQRProducto(codigoQR, nombre);
+        };
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+}
+
+function descargarQRProducto(codigoQR, nombreProducto) {
+    if (!codigoQR || typeof QRious === 'undefined') {
+        alert('QRious no está disponible. Verificá tu conexión a internet.');
+        return;
+    }
+
+    // Canvas temporal a mayor resolución (300px) para calidad de impresión
+    const tempCanvas = document.createElement('canvas');
+    new QRious({
+        element:    tempCanvas,
+        value:      codigoQR,
+        size:       300,
+        background: '#FFFFFF',
+        foreground: '#000000',
+        level:      'M'
+    });
+
+    // Normalizar nombre: quitar acentos, reemplazar caracteres no alfanuméricos por guión
+    const nombreLimpio = (nombreProducto || 'producto')
+        .normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .replace(/[^a-zA-Z0-9]/g, '-')
+        .toLowerCase()
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+
+    const link = document.createElement('a');
+    link.download = `qr-${nombreLimpio}.png`;
+    link.href     = tempCanvas.toDataURL('image/png');
+    link.click();
+}
+
 function renderizarStockGrid(categoria, stockActual) {
     const contenedor = document.getElementById('inv-stock-grid');
     if (!contenedor) return;
@@ -1010,12 +1100,16 @@ function abrirFormProducto(id) {
         document.getElementById('inv-foto').value      = p.foto_url || p.imagen || '';
         inicializarColorSelector(coloresExist);
         renderizarStockGrid(p.categoria, stockPorTalla);
+        // Mostrar QR: usar el existente o pre-generar uno a partir del ID ya conocido
+        const codigoQRMostrar = p.codigoQR || `MONIARQUIA_PRODUCTO_${id}`;
+        renderizarQRProducto(codigoQRMostrar);
     } else {
         if (titulo)     titulo.textContent     = 'Agregar producto';
         if (headerSpan) headerSpan.textContent = 'Agregar producto';
         document.getElementById('form-inventario-producto').reset();
         inicializarColorSelector([]);
         renderizarStockGrid('', {});
+        renderizarQRProducto(null); // ocultar la sección QR para productos nuevos
     }
 
     navegarA('vista-form-producto');
@@ -1045,25 +1139,44 @@ function guardarProducto(e) {
     const tallas = tallesCat.filter(t => stockPorTalla[t] > 0);
     const stock  = tallesCat.reduce((s, t) => s + stockPorTalla[t], 0);
 
+    // Determinar codigoQR: conservar el existente o generar uno nuevo
+    let codigoQR;
+    if (productoEditandoId) {
+        const pExistente = listaPrendasGlobal.find(p => p.id === productoEditandoId);
+        codigoQR = pExistente?.codigoQR || `MONIARQUIA_PRODUCTO_${productoEditandoId}`;
+    }
+    // Para productos nuevos, el ID se genera más adelante con docRef.id
+
     const datos = { nombre, precio, categoria, colores, descripcion, foto_url: foto, stockPorTalla, tallas, stock };
 
     const btn = document.getElementById('btn-guardar-producto');
     if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
 
-    const operacion = productoEditandoId
-        ? db.collection('productos').doc(productoEditandoId).update(datos)
-        : db.collection('productos').add({
-              ...datos,
-              likes: 0,
-              createdAt: firebase.firestore.FieldValue.serverTimestamp()
-          });
-
-    operacion
+    if (productoEditandoId) {
+        // Edición: incluir codigoQR (nuevo o existente)
+        db.collection('productos').doc(productoEditandoId)
+            .update({ ...datos, codigoQR })
+            .then(() => navegarA('vista-inventario', { silencioso: true }))
+            .catch(err => alert('Error al guardar: ' + err.message))
+            .finally(() => {
+                if (btn) { btn.disabled = false; btn.textContent = 'Guardar producto'; }
+            });
+    } else {
+        // Creación: pre-generar docRef para conocer el ID antes de .set()
+        const docRef = db.collection('productos').doc();
+        const nuevoCodigoQR = `MONIARQUIA_PRODUCTO_${docRef.id}`;
+        docRef.set({
+            ...datos,
+            codigoQR:  nuevoCodigoQR,
+            likes:     0,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        })
         .then(() => navegarA('vista-inventario', { silencioso: true }))
         .catch(err => alert('Error al guardar: ' + err.message))
         .finally(() => {
             if (btn) { btn.disabled = false; btn.textContent = 'Guardar producto'; }
         });
+    }
 }
 
 function confirmarEliminar(id) {
@@ -2563,40 +2676,81 @@ function ejecutarCambio() {
 // 12b. ESCANEO DE PRODUCTO (cámara simulada)
 // =====================================================================
 
-function abrirEscaneo() {
+const PREFIJO_QR = 'MONIARQUIA_PRODUCTO_';
+
+// ── CÁMARA Y ESCANEO ─────────────────────────────────────────────────────────
+
+function abrirEscaneo(origen) {
+    origenEscaneo = origen || null;
     navegarA('vista-escanear');
-    // Limpiar estado anterior antes de iniciar
+
+    // Mostrar/ocultar botón "Volver al carrito" según el origen
+    const btnCarrito = document.getElementById('btn-volver-carrito');
+    if (btnCarrito) btnCarrito.style.display = (origen === 'carrito') ? 'flex' : 'none';
+
+    // Limpiar overlay de estado
     const estadoEl = document.getElementById('escaner-estado');
     const videoEl  = document.getElementById('escaner-video');
     if (estadoEl) { estadoEl.textContent = ''; estadoEl.style.display = 'none'; }
     if (videoEl)  videoEl.style.display = 'block';
+
+    // Resetear estado
+    dbgFrames     = 0;
+    qrProcesando  = false;
+    if (dbgSinQRTimer) { clearTimeout(dbgSinQRTimer); dbgSinQRTimer = null; }
+
+    // Inicializar panel inline con valores visibles de inmediato
+    actualizarDebugEscaneo('camara',    `iniciando… jsQR:${typeof jsQR !== 'undefined' ? 'OK' : 'NO CARGADO'}`);
+    actualizarDebugEscaneo('loop',      'detenido');
+    actualizarDebugEscaneo('frames',    '0');
+    actualizarDebugEscaneo('qr',        'ninguno');
+    actualizarDebugEscaneo('firestore', '–');
+    actualizarDebugEscaneo('error',     'ninguno');
+
     iniciarCamara();
 }
 
 function iniciarCamara() {
     const videoEl = document.getElementById('escaner-video');
-    if (!videoEl) return;
-
+    if (!videoEl) {
+        actualizarDebugEscaneo('error', 'sin elemento video');
+        return;
+    }
     if (!navigator.mediaDevices?.getUserMedia) {
+        actualizarDebugEscaneo('camara', 'API no disponible');
         mostrarErrorCamara('Tu dispositivo no soporta acceso a la cámara desde esta app.');
         return;
     }
-
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } })
-        .then(stream => {
-            streamCamara = stream;
-            videoEl.srcObject = stream;
-        })
-        .catch(err => {
-            console.error('Cámara — error:', err.name, err.message);
-            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                mostrarErrorCamara('Permiso de cámara denegado.\nPodés buscar el producto manualmente.');
-            } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-                mostrarErrorCamara('No se encontró una cámara en este dispositivo.');
-            } else {
-                mostrarErrorCamara('No se pudo acceder a la cámara.\nPodés buscar el producto manualmente.');
-            }
-        });
+    actualizarDebugEscaneo('camara', 'solicitando permiso…');
+    navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+    })
+    .then(stream => {
+        streamCamara      = stream;
+        videoEl.srcObject = stream;
+        actualizarDebugEscaneo('camara', 'stream OK, play…');
+        return videoEl.play();
+    })
+    .then(() => {
+        const res = `${videoEl.videoWidth}x${videoEl.videoHeight}`;
+        actualizarDebugEscaneo('camara', `activa (${res})`);
+        qrProcesando = false;
+        iniciarEscaneoLoop();
+        dbgSinQRTimer = setTimeout(() => {
+            if (!qrProcesando) actualizarDebugEscaneo('qr', 'sin QR en 5s — acercá la cámara');
+        }, 5000);
+    })
+    .catch(err => {
+        actualizarDebugEscaneo('camara', `ERROR: ${err.name}`);
+        actualizarDebugEscaneo('error',  err.message);
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+            mostrarErrorCamara('Permiso de cámara denegado.\nPodés buscar el producto manualmente.');
+        } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+            mostrarErrorCamara('No se encontró una cámara en este dispositivo.');
+        } else {
+            mostrarErrorCamara('No se pudo acceder a la cámara.\nPodés buscar el producto manualmente.');
+        }
+    });
 }
 
 function mostrarErrorCamara(mensaje) {
@@ -2607,12 +2761,167 @@ function mostrarErrorCamara(mensaje) {
 }
 
 function detenerCamara() {
+    if (scanningLoop) { cancelAnimationFrame(scanningLoop); scanningLoop = null; }
+    if (dbgSinQRTimer) { clearTimeout(dbgSinQRTimer); dbgSinQRTimer = null; }
+    qrProcesando = false;
     if (streamCamara) {
         streamCamara.getTracks().forEach(t => t.stop());
         streamCamara = null;
     }
     const videoEl = document.getElementById('escaner-video');
     if (videoEl) videoEl.srcObject = null;
+    actualizarDebugEscaneo('loop', 'detenido');
+}
+
+function iniciarEscaneoLoop() {
+    const videoEl = document.getElementById('escaner-video');
+    const canvas  = document.getElementById('qr-scan-canvas');
+
+    if (!videoEl || !canvas) {
+        actualizarDebugEscaneo('loop',  'ERROR: sin video/canvas');
+        actualizarDebugEscaneo('error', 'Canvas no encontrado');
+        return;
+    }
+    if (typeof jsQR === 'undefined') {
+        actualizarDebugEscaneo('loop',  'ERROR: jsQR no cargado');
+        actualizarDebugEscaneo('jsqr',  'NO CARGADO — verificar CDN');
+        actualizarDebugEscaneo('error', 'jsQR no disponible');
+        return;
+    }
+
+    actualizarDebugEscaneo('loop', 'corriendo');
+    actualizarDebugEscaneo('jsqr', `OK (readyState=${videoEl.readyState})`);
+
+    const ctx = canvas.getContext('2d');
+
+    function scan() {
+        if (!streamCamara || qrProcesando) return;
+
+        if (videoEl.readyState >= 2) {
+            dbgFrames++;
+            if (dbgFrames === 1 || dbgFrames % 30 === 0) {
+                actualizarDebugEscaneo('frames', `${dbgFrames} (${videoEl.videoWidth}x${videoEl.videoHeight})`);
+            }
+
+            if (videoEl.videoWidth > 0 && videoEl.videoHeight > 0) {
+                canvas.width  = videoEl.videoWidth;
+                canvas.height = videoEl.videoHeight;
+                ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const resultado = jsQR(imageData.data, imageData.width, imageData.height, {
+                    inversionAttempts: 'attemptBoth'
+                });
+
+                if (resultado?.data) {
+                    actualizarDebugEscaneo('frames', `${dbgFrames} — QR detectado!`);
+                    qrProcesando = true;
+                    procesarCodigoQR(resultado.data);
+                    return;
+                }
+            } else {
+                actualizarDebugEscaneo('error', `Video sin frames (${videoEl.videoWidth}x${videoEl.videoHeight})`);
+            }
+        } else {
+            if (dbgFrames % 60 === 0) {
+                actualizarDebugEscaneo('loop', `esperando video (readyState=${videoEl.readyState})`);
+            }
+        }
+
+        scanningLoop = requestAnimationFrame(scan);
+    }
+
+    scanningLoop = requestAnimationFrame(scan);
+}
+
+function procesarCodigoQR(texto) {
+    if (dbgSinQRTimer) { clearTimeout(dbgSinQRTimer); dbgSinQRTimer = null; }
+    actualizarDebugEscaneo('qr', texto.slice(0, 40));
+
+    if (!texto.startsWith(PREFIJO_QR)) {
+        actualizarDebugEscaneo('error', 'QR no reconocido');
+        mostrarMensajeEscaneo('Código no reconocido.\nPodés buscar el producto manualmente.', false);
+        return;
+    }
+
+    const productoId = texto.slice(PREFIJO_QR.length).trim();
+    if (!productoId) {
+        actualizarDebugEscaneo('error', 'ID vacío en QR');
+        mostrarMensajeEscaneo('Código inválido.', false);
+        return;
+    }
+
+    actualizarDebugEscaneo('firestore', `buscando: ${productoId.slice(0, 20)}`);
+
+    // Primero buscar en memoria (ya cargado por onSnapshot)
+    const local = listaPrendasGlobal.find(p => p.id === productoId);
+    if (local) {
+        actualizarDebugEscaneo('firestore', `en memoria: ${local.nombre}`);
+        detenerCamara();
+        abrirProducto(local.id);
+        return;
+    }
+
+    // Buscar en Firestore
+    mostrarMensajeEscaneo('Buscando producto…', true);
+    db.collection('productos').doc(productoId).get()
+        .then(doc => {
+            if (!doc.exists) {
+                actualizarDebugEscaneo('firestore', 'no encontrado');
+                actualizarDebugEscaneo('error',     'Producto no encontrado');
+                mostrarMensajeEscaneo('Producto no encontrado.\nPodés buscar manualmente.', false);
+                return;
+            }
+            const p = { id: doc.id, ...doc.data() };
+            actualizarDebugEscaneo('firestore', `encontrado: ${p.nombre}`);
+            if (!listaPrendasGlobal.find(x => x.id === p.id)) listaPrendasGlobal.push(p);
+            detenerCamara();
+            abrirProducto(p.id);
+        })
+        .catch(err => {
+            actualizarDebugEscaneo('firestore', 'error');
+            actualizarDebugEscaneo('error', err.code || err.message);
+            mostrarMensajeEscaneo('Error al buscar el producto.', false);
+        });
+}
+
+function mostrarMensajeEscaneo(mensaje, esCargando) {
+    const videoEl  = document.getElementById('escaner-video');
+    const estadoEl = document.getElementById('escaner-estado');
+    if (!estadoEl) return;
+    if (!esCargando && videoEl) videoEl.style.display = 'none';
+    estadoEl.textContent   = mensaje;
+    estadoEl.style.display = 'flex';
+    if (!esCargando) {
+        setTimeout(() => {
+            estadoEl.style.display = 'none';
+            if (videoEl) videoEl.style.display = 'block';
+            qrProcesando = false;
+            iniciarEscaneoLoop();
+        }, 2500);
+    }
+}
+
+function reintentarEscaneo() {
+    detenerCamara();
+    const estadoEl = document.getElementById('escaner-estado');
+    const videoEl  = document.getElementById('escaner-video');
+    if (estadoEl) { estadoEl.textContent = ''; estadoEl.style.display = 'none'; }
+    if (videoEl)  videoEl.style.display = 'block';
+    dbgFrames    = 0;
+    qrProcesando = false;
+    actualizarDebugEscaneo('camara',    'reiniciando…');
+    actualizarDebugEscaneo('loop',      'detenido');
+    actualizarDebugEscaneo('frames',    '0');
+    actualizarDebugEscaneo('qr',        'ninguno');
+    actualizarDebugEscaneo('firestore', '–');
+    actualizarDebugEscaneo('error',     'ninguno');
+    iniciarCamara();
+}
+
+function volverAlCarritoDesdeEscaneo() {
+    detenerCamara();
+    navegarA('vista-carrito-venta');
 }
 
 function buscarManualmente() {

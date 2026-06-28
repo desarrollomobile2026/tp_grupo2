@@ -11,6 +11,8 @@
     
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <link rel="stylesheet" href="style.css">
@@ -452,6 +454,17 @@
                 </div>
             </div>
 
+            <!-- QR del producto — visible solo al editar un producto existente -->
+            <div id="qr-producto-section" class="qr-section" style="display:none;">
+                <p class="qr-section-label">Código QR del producto</p>
+                <canvas id="qr-canvas" class="qr-canvas"></canvas>
+                <p id="qr-codigo-texto" class="qr-codigo-texto"></p>
+                <button type="button" id="btn-descargar-qr" class="btn-descargar-qr">
+                    <i data-lucide="download"></i>
+                    Descargar QR
+                </button>
+            </div>
+
             <button type="submit" class="btn-primary btn-submit" id="btn-guardar-producto">Guardar producto</button>
         </form>
 
@@ -512,8 +525,8 @@
 
     <!-- 0. Escanear producto (cámara) -->
     <main id="vista-escanear" class="vista">
-        <p class="vista-desc escaner-guia">Apuntá la cámara al código del producto</p>
 
+        <!-- Visor de cámara -->
         <div class="escaner-contenedor">
             <video id="escaner-video" class="escaner-video" autoplay playsinline muted></video>
             <div class="escaner-marco">
@@ -525,12 +538,53 @@
             <div id="escaner-estado" class="escaner-estado" style="display:none;"></div>
         </div>
 
+        <!-- Panel de estado inline — siempre visible dentro de la vista -->
+        <div id="escaner-status" class="escaner-status">
+            <div class="escaner-status-fila">
+                <span class="escaner-status-label">CAM</span>
+                <span id="est-camara">esperando</span>
+            </div>
+            <div class="escaner-status-fila">
+                <span class="escaner-status-label">LOOP</span>
+                <span id="est-loop">detenido</span>
+            </div>
+            <div class="escaner-status-fila">
+                <span class="escaner-status-label">FRAMES</span>
+                <span id="est-frames">0</span>
+            </div>
+            <div class="escaner-status-fila">
+                <span class="escaner-status-label">QR</span>
+                <span id="est-qr">ninguno</span>
+            </div>
+            <div class="escaner-status-fila">
+                <span class="escaner-status-label">DB</span>
+                <span id="est-db">–</span>
+            </div>
+            <div class="escaner-status-fila escaner-status-err">
+                <span class="escaner-status-label">ERR</span>
+                <span id="est-error">ninguno</span>
+            </div>
+        </div>
+
+        <!-- Acciones -->
         <div class="escaner-acciones">
-            <button class="btn-primary btn-con-icono" onclick="buscarManualmente()">
+            <button class="btn-primary btn-con-icono" onclick="reintentarEscaneo()">
+                <i data-lucide="refresh-cw"></i>
+                Reintentar escaneo
+            </button>
+            <button class="btn-secondary-outline" onclick="buscarManualmente()">
                 <i data-lucide="search"></i>
-                Buscar producto manualmente
+                Buscar manualmente
+            </button>
+            <button id="btn-volver-carrito" class="btn-outline" style="display:none;"
+                    onclick="volverAlCarritoDesdeEscaneo()">
+                <i data-lucide="shopping-cart"></i>
+                Volver al carrito
             </button>
         </div>
+
+        <!-- Canvas oculto para jsQR -->
+        <canvas id="qr-scan-canvas" style="display:none;" aria-hidden="true"></canvas>
     </main>
 
     <!-- 1. Selección de producto (modo venta) -->
@@ -593,7 +647,7 @@
                 <i data-lucide="circle-arrow-right"></i>
                 Siguiente
             </button>
-            <button class="btn-secondary-outline" onclick="abrirEscaneo()">
+            <button class="btn-secondary-outline" onclick="abrirEscaneo('carrito')">
                 <i data-lucide="scan-line"></i>
                 Escanear otro
             </button>
