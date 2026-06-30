@@ -2341,6 +2341,19 @@ function renderizarDetalleVenta(v) {
         completada: 'Completada', anulada: 'Anulada', devuelta: 'Devuelta'
     }[v.estadoVenta] || 'Completada';
 
+    // Resumen de pago — solo para ventas en cuenta corriente (pueden tener pago parcial)
+    const esCuentaCorriente = v.metodoPago === 'cuenta_corriente';
+    const totalVenta    = v.total || 0;
+    const montoAbonado  = esCuentaCorriente ? (v.montoAbonado ?? 0) : null; // ventas viejas sin el campo → $0
+    const montoAdeudado = esCuentaCorriente ? (totalVenta - montoAbonado) : null;
+
+    const resumenPagoHTML = esCuentaCorriente ? `
+        <div class="detalle-venta-card">
+            <div class="detalle-venta-fila"><span>Total venta</span><strong>$ ${totalVenta.toLocaleString('es-AR')}</strong></div>
+            <div class="detalle-venta-fila"><span>Abonado</span><strong>$ ${montoAbonado.toLocaleString('es-AR')}</strong></div>
+            <div class="detalle-venta-fila"><span>Adeudado</span><strong>$ ${montoAdeudado.toLocaleString('es-AR')}</strong></div>
+        </div>` : '';
+
     const itemsHTML = (v.items || []).map(i => {
         const infoParts = [];
         if (i.talla) infoParts.push(`Talle ${i.talla}`);
@@ -2367,6 +2380,7 @@ function renderizarDetalleVenta(v) {
             <div class="detalle-venta-fila"><span>Medio de pago</span><strong>${medioPagoTexto}</strong></div>
             <div class="detalle-venta-fila"><span>Estado</span><strong>${estadoVentaTexto}</strong></div>
         </div>
+        ${resumenPagoHTML}
         <div class="detalle-venta-productos">
             ${itemsHTML}
         </div>
