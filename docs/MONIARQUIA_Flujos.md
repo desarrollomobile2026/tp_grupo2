@@ -1,7 +1,7 @@
 # Moniarquía — Flujos y navegación entre pantallas
 
-> Versión: 2.1 — Actualizado: 30 de junio de 2026.
-> Incluye todos los flujos implementados en la app actual (54 vistas, rama `oscar`).
+> Versión: 3.0 — Actualizado: Julio 2026.
+> Incluye todos los flujos implementados en la app actual (57 vistas, rama `oscar`).
 
 ---
 
@@ -565,7 +565,66 @@ Inventario
 
 ---
 
-## Mapa de vistas completo (54 vistas)
+## 25. Flujo Venta en curso
+
+**Estado:** ✅ Implementado
+
+**Objetivo:** Permitir retomar una venta con productos ya cargados en el carrito si el usuario navegó a otra pantalla.
+
+```
+Si carritoVenta.length > 0:
+
+Home → card "Mi venta en curso" (rosa-viejo, ícono 🛒, resumen X productos · $ total)
+   ↓ click
+   → vista-carrito-venta (el carrito existente, sin perder ningún producto)
+
+Home → Menú hamburguesa → "Ventas en curso"
+   ↓ click
+   → vista-ventas-en-curso (lista; hoy 0 o 1 venta, preparada para crecer)
+   ↓ Botón "Continuar venta"
+   → vista-carrito-venta
+```
+
+Si `carritoVenta.length === 0`:
+- La card de Home está oculta (`display: none`)
+- La pantalla "Ventas en curso" muestra estado vacío + botón "Iniciar venta"
+
+**Datos involucrados:** `carritoVenta[]` en localStorage (`moniarquia_carrito_venta`). Sin nuevo modelo de datos.
+
+**Funciones:** `renderizarVentaEnCursoHome()`, `renderizarVentasEnCurso()`, `irAVentasEnCurso()`, `resumenCarritoVenta()`. `sincronizarCarritoVenta()` llama `renderizarVentaEnCursoHome()` en cada mutación del carrito.
+
+---
+
+## 26. Flujo Historial de ventas
+
+**Estado:** ✅ Implementado
+
+**Objetivo:** Ver todas las ventas registradas, con detalle de cada una.
+
+```
+Menú hamburguesa → "Historial de ventas"
+   ↓
+vista-historial-ventas
+  - Buscador: por ticket (#ID6), nombre de cliente, nombre de vendedor
+  - Lista ordenada por fecha desc (máx. 50 ventas)
+  - Admin: ve todas las ventas
+  - Empleado: ve solo las suyas (filtro automático por vendedorId)
+   ↓ tap en una venta
+vista-detalle-venta
+  - Número de ticket (#ID6) + fecha completa
+  - Card: Cliente, Vendedor, Medio de pago, Estado
+  - Si medio de pago = Cuenta corriente: segunda card con Total, Abonado, Adeudado
+  - Lista de productos (snapshot: nombre, talla, color, cantidad, subtotal)
+  - Total en rojo destacado al fondo
+```
+
+**Compatibilidad hacia atrás:** ventas sin los campos nuevos (`vendedorNombre`, `clienteNombre`, etc.) se muestran con fallbacks (`'—'`, `'Venta sin cliente'`). No hay diferencia visual notable.
+
+**Funciones:** `irAHistorialVentas()`, `cargarHistorialVentas()`, `buscarHistorialVentas()`, `renderizarHistorialVentas()`, `abrirDetalleVenta()`, `renderizarDetalleVenta()`.
+
+---
+
+## Mapa de vistas completo (57 vistas)
 
 ### Presentación
 `vista-splash-presentacion` (vista inicial, 2s, sin interacción)
@@ -603,9 +662,13 @@ Inventario
 `vista-gestion-usuarios` → `vista-crear-usuario` | `vista-editar-usuario` | `vista-cambiar-rol` | `vista-confirmar-usuario` → `vista-exito-usuario`
 `vista-config-stock` (solo admin)
 
+### Venta en curso y Historial
+`vista-ventas-en-curso` (acceso desde Home + menú)
+`vista-historial-ventas` → `vista-detalle-venta`
+
 ### Legacy (en DOM, sin acceso visual)
 `vista-carrito` (código base original)
 
 ---
 
-*Flujos — Actualizado 30 de junio de 2026.*
+*Flujos — Actualizado Julio 2026.*

@@ -1,268 +1,221 @@
-# Moniarquía — Documento Maestro del Proyecto
+# Moniarquía — Documento Maestro
 
-> Versión: 2.1 — Actualizado: 30 de junio de 2026
+> Versión: 3.0 — Actualizado: Julio 2026
 > Fuente de verdad única del proyecto. Consultar antes de cualquier sesión de desarrollo.
 
 ---
 
-## 1. Información general
+## 1. Descripción del proyecto
 
-### Descripción
+**Moniarquía** es una PWA de gestión operativa para un showroom de ropa.
+Permite administrar ventas, inventario, clientes y cuenta corriente desde un teléfono móvil.
 
-**Moniarquía** es una Progressive Web App (PWA) para la gestión operativa de un showroom de ropa.
-Permite al equipo del local administrar ventas, inventario, clientes y cuenta corriente desde un dispositivo móvil, sin depender de software de escritorio.
-
-### Contexto
-
-- **Institución:** UNPAZ — Materia: Desarrollos para Dispositivos Móviles, Comisión C1, 2026
-- **Alumno:** Oscar Castelani (castelani83@gmail.com)
-- **Repositorio:** `https://github.com/desarrollomobile2026/tp_grupo2`
-- **Rama de trabajo:** `oscar` (nunca modificar `main`)
-
-### Actores y roles
-
-| Rol | Permisos |
+| Campo | Valor |
 |---|---|
-| **Administrador/a** | Acceso completo: ventas, inventario (CRUD), clientes (CRUD), cuenta corriente, configuración, gestión de usuarios |
-| **Empleado/Vendedor/a** | Acceso restringido: iniciar ventas, ver inventario, gestionar stock por talle, ver y crear clientes, cambios y devoluciones |
-
-La restricción por rol se aplica **visualmente en la interfaz**. Las reglas de seguridad de Firestore aún no están configuradas.
+| Institución | UNPAZ — Desarrollos para Dispositivos Móviles, C1, 2026 |
+| Alumno | Oscar Castelani — castelani83@gmail.com |
+| Repositorio | github.com/desarrollomobile2026/tp_grupo2 |
+| Rama de trabajo | `oscar` (nunca tocar `main`) |
 
 ### Stack tecnológico
 
 | Capa | Tecnología |
 |---|---|
-| Frontend | HTML5 + CSS3 + JavaScript vanilla (sin frameworks) |
-| Backend | Firebase Firestore (NoSQL, tiempo real) |
-| Autenticación | Simulada localmente (Firebase Auth no activo) |
-| Almacenamiento | Firebase Storage (eliminado — no se usa) |
+| Frontend | HTML5 + CSS3 + JavaScript vanilla |
+| Base de datos | Firebase Firestore (NoSQL, tiempo real) |
+| Autenticación | Simulada en localStorage (Firebase Auth no activo) |
+| Storage | Eliminado — imágenes por URL manual |
 | Íconos | Lucide Icons (CDN) |
-| Fuentes | Inter (body) + Mr Dafoe (logo) — Google Fonts |
-| QR Generator | QRious v4.0.2 (CDN) |
-| QR Reader | jsQR v1.4.0 (CDN) — funcional |
+| Fuentes | Inter + Mr Dafoe (Google Fonts) |
+| QR generación | QRious v4.0.2 (CDN) |
+| QR lectura | jsQR v1.4.0 (CDN) — funcional |
+
+### Estructura de archivos
+
+```
+tp_grupo2/
+├── index.html      ← 57 vistas en un solo archivo SPA
+├── style.css       ← Design system completo
+├── app.js          ← Toda la lógica (~3300 líneas, ~140 funciones)
+├── config.js       ← Credenciales Firebase (projectId: moniarquiaapp)
+└── docs/
+    ├── MONIARQUIA.md              ← Este archivo
+    ├── MONIARQUIA_FIREBASE.md     ← Colecciones, campos, reglas
+    ├── MONIARQUIA_Flujos.md       ← Flujos de navegación
+    ├── MONIARQUIA_DESIGN_SYSTEM.md← Colores, tipografía, componentes
+    ├── MONIARQUIA_ROADMAP.md      ← Próximas etapas
+    ├── 00_REGLAS_DESARROLLO.md    ← Metodología de trabajo
+    ├── referencias-ui/            ← Capturas del prototipo Figma
+    └── images/                    ← Imágenes de productos de ejemplo
+```
 
 ---
 
 ## 2. Estado actual del proyecto
 
-> Última revisión: 30 de junio de 2026
+> Actualizado: Julio 2026
 
 | Módulo | Estado | Notas |
 |---|---|---|
-| **Splash de presentación** | ✅ Completo | Pantalla introductoria (logo + eslogan) visible 2s al abrir/recargar, antes de cualquier otra vista. Ver sección 4. |
-| **Autenticación** | ⚠️ Simulada | Login/registro funcionan con datos mock. Firebase Auth está revertido. |
-| **Home / Inicio** | ✅ Completo | Logo, menú hamburguesa, dos cards de acción, avatar de perfil, card de alertas de stock bajo. |
-| **Inventario** | ✅ Completo | CRUD completo, búsqueda, filtros por categoría, talles por categoría, indicador visual de stock bajo. |
-| **Escaneo de cámara** | ✅ Completo | Cámara, loop jsQR y búsqueda en Firestore funcionan correctamente. Comportamiento distinto según el origen (venta, carrito o inventario) — ver sección 4. |
-| **Carrito de venta** | ✅ Completo | Selección de producto, talle, color, cantidad. Persiste en localStorage. |
-| **Ventas** | ✅ Completo | Registro en Firestore, 3 métodos de pago, descuento de stock atómico. |
-| **Clientes** | ✅ Completo | Lista, alta, edición, eliminación con confirmación. |
-| **Cuenta corriente** | ✅ Completo | Detalle del cliente, historial de movimientos, pagos completos y parciales. |
-| **Pagos** | ✅ Completo | Efectivo, Mercado Pago, Cuenta corriente. Mercado Pago no integra API (solo se confirma externamente). |
-| **Cambios y devoluciones** | ⚠️ Parcial | Solo cambio de talle del mismo producto. Cambio por otro producto pendiente. |
-| **Configuración** | ✅ Completo | Mi perfil, Gestión de usuarios, Gestión de clientes, Alertas de stock bajo (solo admin), Cambiar contraseña, Cerrar sesión. |
-| **Gestión de usuarios** | ⚠️ Mock | Flujo visual completo (CRUD) pero con datos locales. No conectado a Firestore. |
-| **Mi perfil / Cambiar contraseña** | ⚠️ Mock | Funcionalidad visual completa, no conectada a Firebase Auth. |
-| **QR — Generación** | ✅ Completo | Se genera y guarda `codigoQR` en Firestore. |
-| **QR — Descarga/Visualización** | ✅ Completo | Único acceso: botón "Descargar QR" en la card del inventario (debajo de talles/total). Ya no existe en "Editar producto". |
-| **QR — Lectura/Escaneo** | ✅ Completo | Escaneo QR funcional. Causa raíz resuelta (ver `docs/MONIARQUIA_QR.md`). |
-| **Alertas de stock bajo** | ✅ Completo | Nuevo módulo. Configuración de umbral (solo admin), card roja en Home, chips de alerta en Inventario. Ver sección 4. |
-| **Permisos por rol** | ✅ Completo | Restricciones visuales aplicadas en inventario, clientes, configuración y alertas de stock. Corregido bug de timing al cambiar de rol (ver sección 5). |
-| **Responsividad** | ✅ Completo | Corregida para múltiples tamaños de pantalla (dvh, clamp). |
-| **Navegación con historial** | ✅ Completo | Stack de historial, botón volver inteligente. Bloqueado durante el splash de presentación. |
+| **Splash de presentación** | ✅ Completo | 2s forzados por JS, bloquea navegación durante ese tiempo |
+| **Autenticación** | ⚠️ Simulada | Mock con localStorage. Firebase Auth no activo aún. |
+| **Home / Inicio** | ✅ Completo | Logo, avatar, alertas de stock bajo, card "Mi venta en curso", botones de acción |
+| **Inventario** | ✅ Completo | CRUD, filtros, stock por talle, descarga de QR desde la card, chips de alerta |
+| **Escaneo de cámara** | ✅ Completo | jsQR funcional. Comportamiento distinto según origen: venta/carrito → carrito; inventario → edición |
+| **Carrito de venta** | ✅ Completo | Persiste en localStorage. "Venta en curso" recuperable desde Home y menú |
+| **Venta en curso** | ✅ Completo | Card en Home + pantalla "Ventas en curso" en menú. Basado en `carritoVenta[]` existente |
+| **Ventas** | ✅ Completo | 3 métodos de pago. Descuento de stock atómico via batch. |
+| **Historial de ventas** | ✅ Completo | Lista paginada (50 más recientes). Detalle de venta con snapshot de productos. Filtro por rol (empleado ve solo las suyas). |
+| **Detalle de venta** | ✅ Completo | Ticket completo: vendedor, cliente, medio de pago, estado, productos. Muestra resumen de pago parcial para cuenta corriente |
+| **Clientes** | ✅ Completo | Lista, alta, edición, eliminación. Buscador en tiempo real. |
+| **Cuenta corriente** | ✅ Completo | Detalle, movimientos en tiempo real, pagos completos y parciales |
+| **Cambios y devoluciones** | ⚠️ Parcial | Solo cambio de talle del mismo producto |
+| **Configuración** | ✅ Completo | Mi perfil, Gestión usuarios, Gestión clientes, Alertas de stock (admin), Cambiar contraseña, Logout |
+| **Alertas de stock bajo** | ✅ Completo | Config en localStorage (activo/inactivo + umbral por talle), card roja en Home, chips amarillos en Inventario |
+| **QR — Generación** | ✅ Completo | `codigoQR` guardado en Firestore. Acceso desde card del Inventario |
+| **QR — Escaneo** | ✅ Completo | Funcional. Ver sección 8 de este documento |
+| **Gestión de usuarios** | ⚠️ Mock | CRUD visual completo. Datos en memoria, no persisten |
+| **Permisos por rol** | ✅ Completo | Admin vs Empleado. CSS (`data-rol`) + JS (`esAdmin()`). `aplicarRolUI()` re-renderiza el inventario al cambiar de sesión |
 
 ---
 
-## 3. Base de datos Firestore
+## 3. Roles y permisos
 
-### Colecciones activas
+### Administrador/a
+- CRUD de productos, clientes, gestión de usuarios
+- Ver historial de ventas completo (todas las ventas)
+- Configurar alertas de stock bajo
+- Acceso completo a Configuración
 
-#### `/productos/{productoId}`
+### Empleado/Vendedor/a
+- Ver inventario y modificar stock por talle
+- Iniciar ventas, agregar al carrito, registrar pagos
+- Ver y crear clientes (sin editar ni eliminar)
+- Ver cuenta corriente del cliente
+- Cambios y devoluciones
+- Ver solo **sus propias ventas** en el historial (filtro automático por `vendedorId`)
 
+**Implementación técnica:**
+```css
+#app-container[data-rol="empleado"] .solo-admin { display: none !important; }
+```
 ```js
-{
-  nombre:       string,          // "Campera frizada"
-  precio:       number,          // 38000
-  categoria:    string,          // "Camperas" | "Remeras" | "Pantalones" | "Buzos" | "Shorts"
-  colores:      string[],        // ["negro", "gris"]  — valores del selector predefinido
-  descripcion:  string,          // "Manga larga, suave y frizada."
-  foto_url:     string,          // URL de imagen (manual) o ""
-  stockPorTalla: {               // mapa de talle → cantidad
-    S: number, M: number, L: number, XL: number   // o 36, 38, 40, 42, 44 para pantalones
-  },
-  tallas:       string[],        // talles con stock > 0
-  stock:        number,          // total de todas las tallas
-  codigoQR:     string,          // "MONIARQUIA_PRODUCTO_<id>"  — agregado Jun 2026
-  likes:        number,          // sistema heredado del código base (no se usa visualmente)
-  createdAt:    timestamp
-}
+esAdmin()       // → sesionActual.rol === 'administrador'
+aplicarRolUI()  // setea data-rol + re-renderiza inventario (crítico para evitar bug de timing)
 ```
 
-**Talles por categoría:**
-- Remeras, Camperas, Buzos → `S, M, L, XL`
-- Pantalones, Shorts → `36, 38, 40, 42, 44`
+---
 
-#### `/ventas/{ventaId}`
+## 4. Funcionalidades críticas que no deben romperse
 
-```js
-{
-  clienteId:    string | null,   // ref a /clientes o null si venta anónima
-  items: [{
-    productoId:     string,
-    nombre:         string,
-    talla:          string,
-    color:          string,
-    cantidad:       number,
-    precioUnitario: number,
-    subtotal:       number
-  }],
-  total:        number,
-  metodoPago:   "efectivo" | "mercadopago" | "cuenta_corriente",
-  estado:       "completada" | "deuda",
-  montoAbonado: number,
-  fecha:        timestamp
-}
-```
+Antes de cualquier cambio, verificar que estas funcionen:
 
-#### `/clientes/{clienteId}`
+1. **carritoVenta[]** — persiste en localStorage (`moniarquia_carrito_venta`). `sincronizarCarritoVenta()` actualiza Home + localStorage en cada mutación.
+2. **registrarVenta()** — usa `batch.commit()` (venta + stock + cuenta corriente, atómico). No modificar la lógica de atomicidad.
+3. **onSnapshot de productos** — `listaPrendasGlobal[]` es la fuente de verdad en memoria. Desconectarlo rompe el inventario y el flujo de venta.
+4. **navegarA()** — tiene el guard `splashPresentacionActivo` (primeros 2s) que bloquea toda navegación. No eliminar sin entender implicancias.
+5. **aplicarRolUI()** — llama `renderizarInventario()` al final. Si se quita ese llamado, los botones de editar/eliminar pueden quedar congelados con el rol incorrecto.
+6. **Cuenta corriente** — `deudaTotal` se actualiza con `FieldValue.increment()`. No reemplazar por asignación directa.
+7. **Historial de ventas** — Empleados tienen filtro automático por `vendedorId`. No quitar ese condicional en `cargarHistorialVentas()`.
+8. **Selector de colores** — `coloresSeleccionados[]` se debe resetear en `inicializarColorSelector()` al abrir el formulario de producto.
+9. **Splash de presentación** — `splashPresentacionActivo = true` al inicio + guard en `navegarA()`. La combinación garantiza el splash aunque el HTML servido venga sin la clase `active`.
+10. **Permisos con data-rol** — `data-rol` se setea al hacer login. Si `aplicarRolUI()` no se llama en la restauración de sesión desde localStorage, los botones admin aparecen como empleado.
 
-```js
-{
-  nombre:     string,
-  telefono:   string,
-  email:      string,
-  deudaTotal: number,   // actualizado atómicamente con FieldValue.increment
-  createdAt:  timestamp
-}
-```
+---
 
-#### `/cuentaCorriente/{registroId}`
+## 5. Base de datos Firestore
 
-```js
-{
-  clienteId:   string,   // ref a /clientes
-  tipo:        "deuda" | "pago",
-  monto:       number,
-  descripcion: string,   // "Venta registrada" | "Pago registrado"
-  ventaId:     string,   // ref a /ventas (solo en deudas)
-  fecha:       timestamp
-}
-```
+Ver `docs/MONIARQUIA_FIREBASE.md` para los schemas completos, reglas de seguridad y datos de prueba.
 
-#### `/cambios/{cambioId}`
+**Colecciones activas:**
 
-```js
-{
-  ventaId:        string,
-  productoId:     string,
-  nombreProducto: string,
-  talleDevuelto:  string,
-  talleNuevo:     string,
-  clienteId:      string | null,
-  fecha:          timestamp
-}
-```
-
-### Colecciones definidas pero no activas
-
-| Colección | Estado |
+| Colección | Propósito |
 |---|---|
-| `/usuarios` | Definida en el modelo. No se escribe (auth revertida). Gestión de usuarios usa datos mock. |
+| `/productos` | Catálogo con stock, colores, talles, `codigoQR` |
+| `/clientes` | Cartera de clientes con `deudaTotal` |
+| `/ventas` | Registro de ventas con snapshot completo de productos + vendedor + cliente |
+| `/cuentaCorriente` | Movimientos de deuda/pago por cliente |
+| `/cambios` | Registro de cambios de talle |
 
-### Relaciones entre colecciones
-
-```
-/ventas  →  clienteId  →  /clientes
-/ventas  →  items[].productoId  →  /productos
-/cuentaCorriente  →  clienteId  →  /clientes
-/cuentaCorriente  →  ventaId  →  /ventas
-/cambios  →  productoId  →  /productos
-/cambios  →  ventaId  →  /ventas
-```
+**Campos nuevos en `/ventas` (Julio 2026):**
+Los documentos nuevos incluyen: `idVenta`, `fechaCreacion`, `fechaActualizacion`, `vendedorId` (correo del vendedor), `vendedorNombre`, `clienteNombre` (snapshot), `origenVenta` (`'movil'`), `estadoVenta` (`'completada'`). Los documentos anteriores no tienen estos campos — el código los maneja con fallbacks (`|| '—'`, `|| 'Venta sin cliente'`).
 
 ---
 
-## 4. Decisiones técnicas importantes
+## 6. Decisiones técnicas vigentes
 
-### Firebase como backend
+**Sin Firebase Storage:** se intentó y se revirtió por problemas de configuración. Las imágenes se cargan por URL manual en `foto_url` o mediante mapeo automático de `obtenerFotoProducto()` a archivos en `docs/images/`.
 
-Firebase permite desplegar sin servidor propio, tiene integración nativa con Firestore en tiempo real (`onSnapshot`), y el SDK compat v10 es compatible con el enfoque vanilla JS del proyecto.
+**Autenticación simulada:** `USUARIOS_MOCK[]` hardcodeado. `sesionActual = { nombre, correo, rol }` en localStorage. Todo el código tiene comentarios `// TODO: reemplazar por firebase.auth()...` para la migración futura.
 
-### QRious para generación de QR
+**Alertas de stock bajo en localStorage:** configuración del negocio (`{ activo, stockMinimo }`). Sincrónico, sin tocar Firestore. Migrable a `/configuracion/stockAlertas` cuando haya Auth real.
 
-18 KB minificado. Genera en canvas localmente sin llamadas externas. Simple API de una línea. Ver `docs/MONIARQUIA_QR.md` para detalles.
+**Escaneo QR según origen:** `origenEscaneo` (`'venta'|'carrito'|'inventario'`) determina el destino. Desde inventario → `abrirFormProducto(id)`. Desde venta/carrito → `abrirProducto(id)` para agregar al carrito.
 
-### jsQR para lectura de QR
+**Historial de ventas — paginación mínima:** se traen máximo 50 ventas, ordenadas por fecha en cliente (no via `orderBy` en Firestore para evitar requerir índices compuestos en el MVP). Los filtros avanzados + paginación real con cursor son próxima etapa.
 
-Biblioteca pura JavaScript que trabaja con `ImageData` del canvas. Funciona con `requestAnimationFrame` + `canvas.getImageData()`. **Estado actual: funcional.** El problema inicial no era técnico — ver `docs/MONIARQUIA_QR.md` para el detalle de la resolución.
+**Layout del Home con `.home-bottom`:** la card "Mi venta en curso" y la card de alertas de stock van dentro de `.home-bottom { margin-top: auto }`. Las cards principales NO tienen `margin-top:auto` propio; si se agrega una card nueva al Home, debe ir dentro de `.home-bottom` y NO como hermano directo de `.home-logo`.
 
-### Autenticación simulada (no Firebase Auth)
-
-Firebase Auth fue implementado y luego revertido por problemas de configuración en la consola. Se reemplazó por un sistema simulado con:
-- Datos mock hardcodeados (`USUARIOS_MOCK`)
-- Sesión en localStorage (`moniarquia_session`)
-- Sin tokens reales
-
-El código tiene comentarios `// TODO: reemplazar por firebase.auth()...` en cada función para facilitar la integración futura.
-
-### Carrito temporal en localStorage
-
-El carrito de venta (`carritoVenta`) se persiste en localStorage con clave `moniarquia_carrito_venta`. Esto permite que el vendedor no pierda los productos si recarga accidentalmente. El carrito del código base original (`moniarquia_cart_v1`) se conservó sin tocar.
-
-### Cuenta corriente como método de pago
-
-En lugar de integrar una pasarela de pago real, se implementó un sistema de deuda donde el cliente se lleva el producto y paga después. La deuda se registra en `/cuentaCorriente` y el `deudaTotal` se actualiza con `FieldValue.increment()` (operación atómica).
-
-### Gestión de stock atómica
-
-Al registrar una venta, el descuento de stock se hace en un `batch.commit()` junto con el registro de la venta. Si alguna operación falla, toda la transacción se revierte. Esto evita inconsistencias entre stock y ventas.
-
-### Escaneo QR con comportamiento según origen
-
-El escaneo de QR se usa para dos propósitos distintos, diferenciados por la variable `origenEscaneo` (`'venta' | 'carrito' | 'inventario' | null`):
-- Desde **Home → Iniciar venta** o **Carrito → Escanear otro**: al detectar el QR abre `abrirProducto(id)` (selección de talle/color/cantidad para agregar al carrito)
-- Desde **Inventario → Escanear producto**: al detectar el QR abre `abrirFormProducto(id)` (edición directa del producto), sin pasar por el flujo de venta
-
-`procesarCodigoQR()` decide el destino con un único condicional sobre `origenEscaneo`, sin duplicar lógica de búsqueda.
-
-### Alertas de stock bajo (localStorage, no Firestore)
-
-Se eligió `localStorage` (clave `moniarquia_config_stock`) en vez de una colección de Firestore para la configuración de alertas (`{ activo, stockMinimo }`). Es una configuración del negocio, no por-usuario, sincrónica de leer, y no requiere tocar Firebase. Si se activa Firebase Auth en el futuro, puede migrarse a `/configuracion/stockAlertas` sin cambiar la lógica de cálculo (`calcularAlertasStock()`). La alerta se evalúa **por talle**, no por stock total del producto.
-
-### Splash de presentación forzado por JS
-
-El splash inicial (`#vista-splash-presentacion`) no depende únicamente del HTML servido: `DOMContentLoaded` fuerza por JavaScript que sea la única vista `.active`, agrega una clase `.splash-presentacion-forzado` (`position:absolute; z-index:9999`) y bloquea cualquier `navegarA()` durante 2000ms mediante la variable `splashPresentacionActivo`. Esto evita que el splash se salte por estados intermedios del HTML o por otros scripts.
+**Splash de presentación forzado por JS:** no depende de que el HTML servido traiga `class="active"` ya puesto. `DOMContentLoaded` limpia todas las vistas y fuerza el splash por código + agrega `.splash-presentacion-forzado` (`z-index:9999`). Esto evita que el hosting/CDN sirviendo una copia cacheada del HTML salte el splash.
 
 ---
 
-## 5. Problemas conocidos
+## 7. Historial del módulo QR (resuelto)
 
-| Problema | Impacto | Estado |
+El escaneo QR no funcionaba en iPhone. Tras múltiples iteraciones se descubrió que la causa no era técnica (no era jsQR ni iOS Safari): el QR solo era accesible desde el formulario "Editar producto". Al guardar el producto desde ese formulario se producía un estado inconsistente que impedía el escaneo.
+
+**Solución:** el QR fue removido del formulario de edición y movido a la card del inventario (botón "Descargar QR" debajo de talles/total). El escaneo comenzó a funcionar correctamente.
+
+**Estado actual:**
+- Generación → ✅ funcional
+- Descarga → ✅ desde card del Inventario (único acceso)
+- Escaneo → ✅ funcional en iPhone con jsQR
+- Panel de diagnóstico `#escaner-status` → eliminado (ya no necesario)
+
+---
+
+## 8. Deudas técnicas
+
+| Deuda | Impacto | Prioridad |
 |---|---|---|
-| ~~Escaneo QR no funcional~~ | Resuelto — ver `docs/MONIARQUIA_QR.md` | — |
-| **Firebase Auth no activo** | Alto — autenticación es simulada, sin seguridad real | Pendiente (requiere activar en consola) |
-| **Gestión de usuarios con datos mock** | Medio — los usuarios creados no persisten en Firestore | Pendiente |
-| **Cambio por otro producto no implementado** | Bajo — solo se puede cambiar de talle del mismo producto | Pendiente |
-| **Configuración de usuarios sin conectar** | Bajo — pantalla visual pero sin funcionalidad real | Pendiente |
-| **Firebase Storage eliminado** | Informativo — las imágenes se cargan por URL manual | No hay plan de reimplementar por ahora |
-| **Reglas de Firestore abiertas** | Alto (producción) — aceptable para desarrollo/TP | Documentar antes de producción |
-| **Recuperación de contraseña sin backend** | Medio — flujo visual pero sin envío real de email | Requiere Firebase Auth activo |
-| **Modal QR huérfano** | Bajo — `abrirModalQR()`, `modalDescargarQR()` y `#modal-qr-overlay` siguen en el código pero sin ningún botón que los invoque | Limpieza pendiente (ver `docs/MONIARQUIA_ESTADO_ACTUAL.md`) |
+| `abrirModalQR()` / `#modal-qr-overlay` sin caller | Bajo — código muerto, no afecta funcionalidad | Baja |
+| `vista-carrito` legacy en el DOM | Bajo — sin acceso visual | Baja |
+| `renderizarCatalogo()` / `renderizarFavoritos()` sin pantalla activa | Bajo — funciones huérfanas | Baja |
+| Sin paginación real en historial/ventas | Medio — a escala de centenares de ventas, los 50 más recientes pueden no ser suficientes | Media |
+| Firebase Auth no activo | Alto — sin seguridad real en producción | Alta |
+| Reglas de Firestore abiertas (`allow read, write: if true`) | Alto — aceptable en desarrollo, crítico en producción | Alta |
+| Gestión de usuarios sin persistencia (datos en memoria) | Medio | Media |
+| `vendedorId` es el correo (no uid real) | Bajo ahora, requiere migración cuando se active Auth | Media |
 
 ---
 
-## 6. Documentación relacionada
+## 9. Última iteración realizada
 
-| Archivo | Contenido |
+**Julio 2026 — Historial de ventas e iteraciones QR**
+
+Funcionalidades agregadas en las últimas 5-6 sesiones de desarrollo:
+1. Splash de presentación (`#vista-splash-presentacion`, 2s, forzado por JS)
+2. Reubicación del QR al Inventario + eliminación del QR en "Editar producto"
+3. Escaneo QR diferenciado por origen (venta/carrito vs inventario)
+4. Corrección de bug de roles: `aplicarRolUI()` re-renderiza el inventario
+5. Alertas de stock bajo (config + Home + Inventario)
+6. Venta en curso: card en Home + pantalla "Ventas en curso" en menú
+7. Historial de ventas: lista + detalle + resumen de pago parcial en cuenta corriente
+8. Campos nuevos en `/ventas`: `vendedorId`, `vendedorNombre`, `clienteNombre`, `origenVenta`, `estadoVenta`, `fechaCreacion`, `fechaActualizacion`
+
+---
+
+## 10. Índice de documentación
+
+| Archivo | Cuándo leer |
 |---|---|
-| `docs/MONIARQUIA_Flujos.md` | Todos los flujos de navegación con diagramas textuales |
-| `docs/MONIARQUIA_ESTADO_ACTUAL.md` | Resumen ejecutivo con prioridades |
-| `docs/MONIARQUIA_FIREBASE.md` | Configuración, colecciones, datos de prueba |
-| `docs/MONIARQUIA_DESIGN_SYSTEM.md` | Tokens de color, tipografía, componentes, UX |
-| `docs/MONIARQUIA_QR.md` | Bitácora técnica completa del sistema QR |
-| `docs/MONIARQUIA_ROADMAP.md` | Hoja de ruta con prioridades |
-| `docs/00_REGLAS_DESARROLLO.md` | Metodología de trabajo, rama, etapas |
+| **`MONIARQUIA.md`** (este archivo) | Siempre primero — visión completa del proyecto |
+| **`MONIARQUIA_FIREBASE.md`** | Al tocar colecciones, campos o reglas de Firestore |
+| **`MONIARQUIA_Flujos.md`** | Al implementar un flujo nuevo o modificar navegación |
+| **`MONIARQUIA_DESIGN_SYSTEM.md`** | Al crear nuevas pantallas o componentes |
+| **`MONIARQUIA_ROADMAP.md`** | Al decidir qué implementar a continuación |
+| **`00_REGLAS_DESARROLLO.md`** | Al iniciar una nueva sesión de desarrollo |
 
 ---
 
-*Documento maestro — Actualizado 30 de junio de 2026. Actualizar al iniciar cada nueva sesión de desarrollo importante.*
+*Documento maestro — Julio 2026.*
