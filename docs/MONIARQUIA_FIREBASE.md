@@ -1,7 +1,7 @@
 # Moniarquía — Firebase
 
 > Documentación de la configuración y uso de Firebase en el proyecto.
-> Actualizado: Junio 2026.
+> Actualizado: Julio 2026.
 
 ---
 
@@ -140,35 +140,33 @@ Modo: **Production** (en la práctica abierto para testing — ver sección de r
 
 | Campo | Tipo | Descripción |
 |---|---|---|
+| `idVenta` | string | Denormalización del doc ID — útil en exportaciones y tickets |
+| `fecha` | timestamp | Fecha/hora de la venta (serverTimestamp) |
+| `fechaCreacion` | timestamp | Igual a `fecha` al crear |
+| `fechaActualizacion` | timestamp | Se actualiza al anular/devolver (futuro) |
 | `clienteId` | string \| null | ID del cliente o null si anónima |
-| `items` | array | Ítems de la venta |
-| `items[].productoId` | string | ID del producto |
-| `items[].nombre` | string | Nombre del producto (snapshot) |
-| `items[].talla` | string | Talle seleccionado |
-| `items[].color` | string | Color seleccionado |
+| `clienteNombre` | string \| null | Snapshot del nombre del cliente al momento de la venta |
+| `vendedorId` | string \| null | `correo` del vendedor (hasta que haya Firebase Auth real — migrar a uid cuando esté activo) |
+| `vendedorNombre` | string \| null | Snapshot del nombre del vendedor |
+| `metodoPago` | string | `"efectivo"` \| `"mercadopago"` \| `"cuenta_corriente"` |
+| `estado` | string | Estado de pago: `"completada"` (pagado) \| `"deuda"` (pago parcial/pendiente) |
+| `estadoVenta` | string | Ciclo de vida: `"completada"` \| `"anulada"` \| `"devuelta"` — hoy siempre `"completada"` |
+| `total` | number | Suma de todos los subtotales |
+| `montoAbonado` | number | Igual a `total` para efectivo/MP; puede ser menor en cta. cte. |
+| `origenVenta` | string | `"movil"` \| `"desktop"` — hoy siempre `"movil"` |
+| `items` | array | Snapshot completo de los productos vendidos (inmutable) |
+| `items[].productoId` | string | |
+| `items[].nombre` | string | |
+| `items[].talla` | string | |
+| `items[].color` | string | |
 | `items[].cantidad` | number | |
 | `items[].precioUnitario` | number | |
-| `items[].subtotal` | number | `precio × cantidad` |
-| `total` | number | Suma de todos los subtotales |
-| `metodoPago` | string | "efectivo" \| "mercadopago" \| "cuenta_corriente" |
-| `estado` | string | "completada" \| "deuda" |
-| `montoAbonado` | number | Igual a `total` en efectivo/MP; menor en cta. cte. |
-| `fecha` | timestamp | |
+| `items[].subtotal` | number | `precioUnitario × cantidad` |
+| `items[].categoria` | string | Snapshot de la categoría del producto |
 
-**Ejemplo:**
-```json
-{
-  "clienteId": "xyz789",
-  "items": [
-    { "productoId": "abc123", "nombre": "Campera frizada", "talla": "M", "color": "gris", "cantidad": 1, "precioUnitario": 38000, "subtotal": 38000 }
-  ],
-  "total": 38000,
-  "metodoPago": "cuenta_corriente",
-  "estado": "deuda",
-  "montoAbonado": 10000,
-  "fecha": "2026-06-28T..."
-}
-```
+> **Nota sobre compatibilidad:** documentos creados antes de Julio 2026 no tienen los campos `idVenta`, `fechaCreacion`, `fechaActualizacion`, `vendedorId`, `vendedorNombre`, `clienteNombre`, `origenVenta`, `estadoVenta`, `items[].categoria`. El código de `renderizarDetalleVenta()` maneja su ausencia con fallbacks (`|| '—'`, `?? 0`, etc.).
+
+> **Nota sobre `estado` vs `estadoVenta`:** `estado` indica el estado de pago (`completada`/`deuda`) — en uso desde el inicio, no renombrar. `estadoVenta` indica el ciclo de vida de la venta — campo nuevo, preparado para `anulada`/`devuelta` en una etapa futura.
 
 #### `/clientes`
 
