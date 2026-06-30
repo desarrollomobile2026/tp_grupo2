@@ -169,6 +169,7 @@ body {
 
 /* En Home y en pantallas de auth el header es rosa-base sin borde */
 #app-container[data-vista="vista-home"] .top-header,
+#app-container[data-vista="vista-splash-presentacion"] .top-header,
 #app-container[data-vista="vista-splash"] .top-header,
 #app-container[data-vista="vista-login"] .top-header,
 #app-container[data-vista="vista-registro"] .top-header,
@@ -182,6 +183,7 @@ body {
 }
 
 /* Ocultar botón menú en pantallas de auth */
+#app-container[data-vista="vista-splash-presentacion"] #btn-menu,
 #app-container[data-vista="vista-splash"] #btn-menu,
 #app-container[data-vista="vista-login"] #btn-menu,
 #app-container[data-vista="vista-registro"] #btn-menu,
@@ -1514,6 +1516,34 @@ body {
 /* ==========================================
    AUTENTICACIÓN SIMULADA
    ========================================== */
+
+/* Splash de presentación (introductorio, ~2s, sin interacción) */
+#vista-splash-presentacion {
+    background-color: var(--rosa-base);
+    align-items: center;
+    justify-content: center;
+    gap: 28px;
+    text-align: center;
+}
+
+/* Refuerzo: garantiza prioridad visual absoluta mientras dura el splash,
+   independiente de cualquier otro elemento posicionado dentro de #app-container */
+.splash-presentacion-forzado {
+    display: flex !important;
+    position: absolute;
+    inset: 0;
+    z-index: 9999;
+}
+
+.splash-presentacion-logo { text-align: center; }
+
+.splash-presentacion-eslogan {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--negro-texto);
+    letter-spacing: 1px;
+    line-height: 1.6;
+}
 
 /* Splash */
 #vista-splash {

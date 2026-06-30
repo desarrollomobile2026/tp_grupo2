@@ -15,11 +15,11 @@
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
 
-<div id="app-container" data-vista="vista-splash">
+<div id="app-container" data-vista="vista-splash-presentacion">
 
     <header class="top-header">
         <button class="btn-nav" id="btn-volver" onclick="volverAtras()">
@@ -84,8 +84,22 @@
          AUTENTICACIÓN SIMULADA
          ══════════════════════════════════════════════════════════════ -->
 
+    <!-- 0. Splash de presentación — pantalla introductoria, se oculta automáticamente -->
+    <main id="vista-splash-presentacion" class="vista active">
+        <div class="splash-presentacion-logo">
+            <h1 class="logo-text">Moniarquía</h1>
+            <p class="sub-logo">INDUMENTARIA</p>
+            <div class="home-deco">
+                <span class="deco-line"></span>
+                <i data-lucide="heart" class="deco-heart"></i>
+                <span class="deco-line"></span>
+            </div>
+        </div>
+        <p class="splash-presentacion-eslogan">VESTITE CON ONDA,<br>VESTITE COMO QUIERAS.</p>
+    </main>
+
     <!-- 1. Splash -->
-    <main id="vista-splash" class="vista active">
+    <main id="vista-splash" class="vista">
         <div class="auth-logo">
             <h1 class="logo-text">Moniarquía</h1>
             <p class="sub-logo">INDUMENTARIA</p>
@@ -1438,6 +1452,6 @@
 </div>
 
 <script src="config.js"></script>
-<script src="app.js"></script>
+<script src="app.js?v=2"></script>
 </body>
 </html>
