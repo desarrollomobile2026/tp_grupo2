@@ -1,7 +1,7 @@
 # Moniarquía — Flujos y navegación entre pantallas
 
-> Versión: 2.0 — Actualizado: Junio 2026.
-> Incluye todos los flujos implementados en la app actual (52 vistas, rama `oscar`).
+> Versión: 2.1 — Actualizado: 30 de junio de 2026.
+> Incluye todos los flujos implementados en la app actual (54 vistas, rama `oscar`).
 
 ---
 
@@ -345,52 +345,54 @@ El acceso principal vive en el menú hamburguesa porque es una acción secundari
 
 ```
 Inventario
-↓ Tocar ícono editar (admin)
-↓ Formulario de edición del producto
-↓ Sección "Código QR del producto" (visible al editar)
-↓ Canvas con el QR generado por QRious
-↓ Texto: MONIARQUIA_PRODUCTO_<idFirestore>
-↓ Botón "Descargar QR"
-↓ Descarga PNG 300px — archivo: qr-<nombre>.png
+↓ Card del producto → botón "Descargar QR" (debajo de talles/total, ancho completo, solo admin)
+↓ Descarga directa PNG 300px — archivo: qr-<nombre>.png
 ```
+
+> El QR ya **no se muestra ni se descarga desde "Editar producto"** — fue eliminado por completo de ese formulario. La card del Inventario es el único punto de acceso.
 
 **Datos involucrados:**
 - `codigoQR` guardado en `/productos/{id}.codigoQR`
 - Se genera automáticamente al crear el producto (usando el ID de Firestore)
-- Al editar: si no tiene `codigoQR`, se genera con su ID actual
+- Si un producto no tiene `codigoQR` (creado antes de la feature), se usa el fallback `MONIARQUIA_PRODUCTO_<id>` al descargar
 
-**Funciones:** `renderizarQRProducto(codigoQR)`, `descargarQRProducto(codigoQR, nombre)`, `guardarProducto(e)`
+**Funciones:** `descargarQRDesdeInventario(productoId)`, `descargarQRProducto(codigoQR, nombre)`, `guardarProducto(e)`
+
+**Nota:** `abrirModalQR()`, `modalDescargarQR()` y el modal `#modal-qr-overlay` siguen existiendo en el código pero sin ningún botón que los invoque — quedaron huérfanos tras simplificar la descarga a un botón directo. Ver `docs/MONIARQUIA_ROADMAP.md` ítem 13.
 
 ---
 
 ## 18. Flujo QR — Escanear y abrir producto
 
-**Estado:** ⚠️ Implementado, no funcional en iPhone (ver `docs/MONIARQUIA_QR.md`)
+**Estado:** ✅ Implementado y funcional
 
-**Objetivo:** Escanear el QR de una prenda para abrir directamente su pantalla de selección.
+**Objetivo:** Escanear el QR de una prenda. El comportamiento depende de **desde dónde se inició el escaneo** (`origenEscaneo`).
 
 ```
-Home → "Iniciar venta"        ← abrirEscaneo()
-  O
-Carrito → "Escanear otro"     ← abrirEscaneo('carrito')
+Home → "Iniciar venta"         ← abrirEscaneo()                origenEscaneo = null
+Carrito → "Escanear otro"      ← abrirEscaneo('carrito')        origenEscaneo = 'carrito'
+Inventario → "Escanear producto" ← abrirEscaneo('inventario')   origenEscaneo = 'inventario'  (solo admin)
 ↓
 #vista-escanear
   - Video de cámara
-  - Panel de estado (CAM / LOOP / FRAMES / QR / DB / ERR)
   - Botón: Reintentar escaneo
   - Botón: Buscar manualmente
-  - Botón: Volver al carrito (solo desde carrito)
+  - Botón: Volver al carrito (solo visible si origenEscaneo === 'carrito')
 ↓ jsQR detecta: MONIARQUIA_PRODUCTO_<id>
 ↓ procesarCodigoQR(texto)
-↓ Buscar en listaPrendasGlobal (memoria)
-  → Si existe: abrirProducto(id)
-  → Si no: buscar en Firestore → abrirProducto(id)
-↓ #vista-producto (seleccionar color, talle, cantidad)
-↓ Agregar al carrito
-↓ #vista-carrito-venta
+↓ Buscar en listaPrendasGlobal (memoria) → si no está, buscar en Firestore
+↓
+  Si origenEscaneo === 'inventario':
+      → abrirFormProducto(id)  →  edición directa del producto
+  Si no (venta o carrito):
+      → abrirProducto(id)  →  #vista-producto (seleccionar color, talle, cantidad)
+                            →  Agregar al carrito
+                            →  #vista-carrito-venta
 ```
 
 **Funciones:** `abrirEscaneo(origen)`, `iniciarCamara()`, `iniciarEscaneoLoop()`, `procesarCodigoQR(texto)`, `reintentarEscaneo()`, `buscarManualmente()`, `volverAlCarritoDesdeEscaneo()`
+
+**Causa raíz del problema histórico de escaneo:** ver `docs/MONIARQUIA_QR.md` sección de resolución final. No era un problema técnico de jsQR/iOS, sino que el QR solo era accesible desde "Editar producto", lo que generaba un estado inconsistente.
 
 ---
 
@@ -498,9 +500,75 @@ Cerrar sesión
   ↓ Navega al Splash
 ```
 
+> **Nota:** antes de llegar a este flujo, la app siempre pasa primero por el splash de presentación (ver flujo 23). `vista-splash` (la pantalla de bienvenida con "Iniciar sesión"/"Registrarse") es distinta de `vista-splash-presentacion` (la introducción de 2 segundos).
+
 ---
 
-## Mapa de vistas completo (52 vistas)
+## 23. Flujo Splash de presentación
+
+**Estado:** ✅ Implementado
+
+**Objetivo:** Mostrar una introducción visual breve (logo + eslogan) antes de cualquier otra pantalla, al abrir o recargar la app.
+
+```
+Abrir / recargar la app
+↓
+#vista-splash-presentacion (única vista con .active al cargar el DOM)
+  - Logo Moniarquía + "INDUMENTARIA"
+  - Ícono de corazón
+  - "VESTITE CON ONDA, VESTITE COMO QUIERAS."
+↓ (2000ms — navegación bloqueada durante este tiempo)
+iniciarApp()
+  → sesión guardada → vista-home
+  → sin sesión       → vista-splash (bienvenida/login)
+```
+
+**Datos involucrados:** ninguno — no depende de sesión, Firestore, ni configuración de stock.
+
+**Funciones:** `splashPresentacionActivo` (variable de bloqueo), guard en `navegarA()`, `iniciarApp()` (sin cambios en su lógica interna).
+
+---
+
+## 24. Flujo Alertas de stock bajo
+
+**Estado:** ✅ Implementado
+
+**Objetivo:** Avisar cuando algún talle de un producto cae en o por debajo del stock mínimo configurado.
+
+```
+Configuración (solo admin)
+↓ "Alertas de stock bajo"
+↓ #vista-config-stock
+  - Toggle ON/OFF
+  - Input: stock mínimo por talle
+  - Botón "Guardar configuración"
+↓ guardarConfigStockForm() → localStorage (moniarquia_config_stock) → vuelve a Configuración
+
+--- En paralelo, en cualquier vista ---
+
+calcularAlertasStock() evalúa cada talle de cada producto:
+  cantidad <= stockMinimo  →  talle en alerta
+
+Home
+  → card roja "Productos con poco stock" (oculta si no hay alertas)
+  → botón "Ver productos" → Inventario
+
+Inventario
+  → chips de talla con fondo amarillo en los talles afectados
+```
+
+**Datos involucrados:** `configStock = { activo, stockMinimo }` en `localStorage`, no en Firestore.
+
+**Funciones:** `cargarConfigStock()`, `guardarConfigStock()`, `calcularAlertasStock()`, `renderizarAlertasHome()`, `abrirConfigStock()`, `guardarConfigStockForm()`.
+
+**Permisos:** la pantalla de configuración es `solo-admin`. Las alertas en Home e Inventario son visibles para ambos roles.
+
+---
+
+## Mapa de vistas completo (54 vistas)
+
+### Presentación
+`vista-splash-presentacion` (vista inicial, 2s, sin interacción)
 
 ### Autenticación
 `vista-splash` → `vista-login` → `vista-registro` → `vista-perfil-creado`
@@ -533,10 +601,11 @@ Cerrar sesión
 `vista-mi-perfil` → `vista-editar-perfil` → `vista-exito-perfil`
 `vista-cambiar-password` → `vista-exito-password`
 `vista-gestion-usuarios` → `vista-crear-usuario` | `vista-editar-usuario` | `vista-cambiar-rol` | `vista-confirmar-usuario` → `vista-exito-usuario`
+`vista-config-stock` (solo admin)
 
 ### Legacy (en DOM, sin acceso visual)
 `vista-carrito` (código base original)
 
 ---
 
-*Flujos — Junio 2026.*
+*Flujos — Actualizado 30 de junio de 2026.*

@@ -1,6 +1,6 @@
 # Moniarquía — Documento Maestro del Proyecto
 
-> Versión: 2.0 — Actualizado: Junio 2026
+> Versión: 2.1 — Actualizado: 30 de junio de 2026
 > Fuente de verdad única del proyecto. Consultar antes de cualquier sesión de desarrollo.
 
 ---
@@ -45,28 +45,31 @@ La restricción por rol se aplica **visualmente en la interfaz**. Las reglas de 
 
 ## 2. Estado actual del proyecto
 
-> Última revisión: Junio 2026
+> Última revisión: 30 de junio de 2026
 
 | Módulo | Estado | Notas |
 |---|---|---|
+| **Splash de presentación** | ✅ Completo | Pantalla introductoria (logo + eslogan) visible 2s al abrir/recargar, antes de cualquier otra vista. Ver sección 4. |
 | **Autenticación** | ⚠️ Simulada | Login/registro funcionan con datos mock. Firebase Auth está revertido. |
-| **Home / Inicio** | ✅ Completo | Logo, menú hamburguesa, dos cards de acción, avatar de perfil. |
-| **Inventario** | ✅ Completo | CRUD completo, búsqueda, filtros por categoría, talles por categoría. |
-| **Escaneo de cámara** | ✅ Completo | Cámara, loop jsQR y búsqueda en Firestore funcionan correctamente. |
+| **Home / Inicio** | ✅ Completo | Logo, menú hamburguesa, dos cards de acción, avatar de perfil, card de alertas de stock bajo. |
+| **Inventario** | ✅ Completo | CRUD completo, búsqueda, filtros por categoría, talles por categoría, indicador visual de stock bajo. |
+| **Escaneo de cámara** | ✅ Completo | Cámara, loop jsQR y búsqueda en Firestore funcionan correctamente. Comportamiento distinto según el origen (venta, carrito o inventario) — ver sección 4. |
 | **Carrito de venta** | ✅ Completo | Selección de producto, talle, color, cantidad. Persiste en localStorage. |
 | **Ventas** | ✅ Completo | Registro en Firestore, 3 métodos de pago, descuento de stock atómico. |
 | **Clientes** | ✅ Completo | Lista, alta, edición, eliminación con confirmación. |
 | **Cuenta corriente** | ✅ Completo | Detalle del cliente, historial de movimientos, pagos completos y parciales. |
 | **Pagos** | ✅ Completo | Efectivo, Mercado Pago, Cuenta corriente. Mercado Pago no integra API (solo se confirma externamente). |
 | **Cambios y devoluciones** | ⚠️ Parcial | Solo cambio de talle del mismo producto. Cambio por otro producto pendiente. |
-| **Configuración** | ✅ Completo | Pantalla con 5 opciones: Mi perfil, Gestión de usuarios, Gestión de clientes, Cambiar contraseña, Cerrar sesión. |
+| **Configuración** | ✅ Completo | Mi perfil, Gestión de usuarios, Gestión de clientes, Alertas de stock bajo (solo admin), Cambiar contraseña, Cerrar sesión. |
 | **Gestión de usuarios** | ⚠️ Mock | Flujo visual completo (CRUD) pero con datos locales. No conectado a Firestore. |
 | **Mi perfil / Cambiar contraseña** | ⚠️ Mock | Funcionalidad visual completa, no conectada a Firebase Auth. |
-| **QR — Generación** | ✅ Completo | Se genera y guarda `codigoQR` en Firestore. Accesible desde la card del inventario (modal). |
+| **QR — Generación** | ✅ Completo | Se genera y guarda `codigoQR` en Firestore. |
+| **QR — Descarga/Visualización** | ✅ Completo | Único acceso: botón "Descargar QR" en la card del inventario (debajo de talles/total). Ya no existe en "Editar producto". |
 | **QR — Lectura/Escaneo** | ✅ Completo | Escaneo QR funcional. Causa raíz resuelta (ver `docs/MONIARQUIA_QR.md`). |
-| **Permisos por rol** | ✅ Completo | Restricciones visuales aplicadas en inventario, clientes y configuración. |
+| **Alertas de stock bajo** | ✅ Completo | Nuevo módulo. Configuración de umbral (solo admin), card roja en Home, chips de alerta en Inventario. Ver sección 4. |
+| **Permisos por rol** | ✅ Completo | Restricciones visuales aplicadas en inventario, clientes, configuración y alertas de stock. Corregido bug de timing al cambiar de rol (ver sección 5). |
 | **Responsividad** | ✅ Completo | Corregida para múltiples tamaños de pantalla (dvh, clamp). |
-| **Navegación con historial** | ✅ Completo | Stack de historial, botón volver inteligente. |
+| **Navegación con historial** | ✅ Completo | Stack de historial, botón volver inteligente. Bloqueado durante el splash de presentación. |
 
 ---
 
@@ -214,6 +217,22 @@ En lugar de integrar una pasarela de pago real, se implementó un sistema de deu
 
 Al registrar una venta, el descuento de stock se hace en un `batch.commit()` junto con el registro de la venta. Si alguna operación falla, toda la transacción se revierte. Esto evita inconsistencias entre stock y ventas.
 
+### Escaneo QR con comportamiento según origen
+
+El escaneo de QR se usa para dos propósitos distintos, diferenciados por la variable `origenEscaneo` (`'venta' | 'carrito' | 'inventario' | null`):
+- Desde **Home → Iniciar venta** o **Carrito → Escanear otro**: al detectar el QR abre `abrirProducto(id)` (selección de talle/color/cantidad para agregar al carrito)
+- Desde **Inventario → Escanear producto**: al detectar el QR abre `abrirFormProducto(id)` (edición directa del producto), sin pasar por el flujo de venta
+
+`procesarCodigoQR()` decide el destino con un único condicional sobre `origenEscaneo`, sin duplicar lógica de búsqueda.
+
+### Alertas de stock bajo (localStorage, no Firestore)
+
+Se eligió `localStorage` (clave `moniarquia_config_stock`) en vez de una colección de Firestore para la configuración de alertas (`{ activo, stockMinimo }`). Es una configuración del negocio, no por-usuario, sincrónica de leer, y no requiere tocar Firebase. Si se activa Firebase Auth en el futuro, puede migrarse a `/configuracion/stockAlertas` sin cambiar la lógica de cálculo (`calcularAlertasStock()`). La alerta se evalúa **por talle**, no por stock total del producto.
+
+### Splash de presentación forzado por JS
+
+El splash inicial (`#vista-splash-presentacion`) no depende únicamente del HTML servido: `DOMContentLoaded` fuerza por JavaScript que sea la única vista `.active`, agrega una clase `.splash-presentacion-forzado` (`position:absolute; z-index:9999`) y bloquea cualquier `navegarA()` durante 2000ms mediante la variable `splashPresentacionActivo`. Esto evita que el splash se salte por estados intermedios del HTML o por otros scripts.
+
 ---
 
 ## 5. Problemas conocidos
@@ -228,6 +247,7 @@ Al registrar una venta, el descuento de stock se hace en un `batch.commit()` jun
 | **Firebase Storage eliminado** | Informativo — las imágenes se cargan por URL manual | No hay plan de reimplementar por ahora |
 | **Reglas de Firestore abiertas** | Alto (producción) — aceptable para desarrollo/TP | Documentar antes de producción |
 | **Recuperación de contraseña sin backend** | Medio — flujo visual pero sin envío real de email | Requiere Firebase Auth activo |
+| **Modal QR huérfano** | Bajo — `abrirModalQR()`, `modalDescargarQR()` y `#modal-qr-overlay` siguen en el código pero sin ningún botón que los invoque | Limpieza pendiente (ver `docs/MONIARQUIA_ESTADO_ACTUAL.md`) |
 
 ---
 
@@ -245,4 +265,4 @@ Al registrar una venta, el descuento de stock se hace en un `batch.commit()` jun
 
 ---
 
-*Documento maestro — Junio 2026. Actualizar al iniciar cada nueva sesión de desarrollo importante.*
+*Documento maestro — Actualizado 30 de junio de 2026. Actualizar al iniciar cada nueva sesión de desarrollo importante.*

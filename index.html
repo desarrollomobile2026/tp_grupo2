@@ -68,6 +68,7 @@
         <span class="header-titulo header-titulo--cambiar-password">Cambiar contraseña</span>
         <span class="header-titulo header-titulo--gestionar-stock">Gestionar stock</span>
         <span class="header-titulo header-titulo--config-stock">Alertas de stock bajo</span>
+        <span class="header-titulo header-titulo--ventas-en-curso">Ventas en curso</span>
         <button class="btn-nav" id="btn-menu" onclick="abrirMenu()">
             <i data-lucide="menu"></i>
         </button>
@@ -310,6 +311,18 @@
             </div>
         </div>
         <div class="home-bottom">
+            <!-- Card de venta en curso — visible solo cuando hay productos en el carrito -->
+            <button id="home-venta-curso" class="home-venta-curso" style="display:none;" onclick="navegarA('vista-carrito-venta')">
+                <div class="home-venta-curso-icono">
+                    <i data-lucide="shopping-cart"></i>
+                </div>
+                <div class="home-venta-curso-texto">
+                    <span class="home-venta-curso-titulo">Mi venta en curso</span>
+                    <span class="home-venta-curso-resumen" id="home-venta-curso-resumen"></span>
+                </div>
+                <i data-lucide="chevron-right" class="home-venta-curso-chevron"></i>
+            </button>
+
             <!-- Card de alertas de stock bajo — visible solo cuando hay alertas activas -->
             <div id="home-alertas-stock" class="home-alerta-stock" style="display:none;">
                 <div class="home-alerta-header">
@@ -1394,6 +1407,13 @@
         </div>
     </main>
 
+    <!-- Vista: Ventas en curso -->
+    <main id="vista-ventas-en-curso" class="vista">
+        <h2 class="section-title">Ventas en curso</h2>
+        <p class="vista-desc">Continuá una venta que dejaste abierta</p>
+        <div id="ventas-curso-contenido"></div>
+    </main>
+
     <!-- Modal de QR del producto -->
     <div id="modal-qr-overlay" class="modal-qr-overlay" style="display:none;" onclick="cerrarModalQR()">
         <div class="modal-qr-panel" onclick="event.stopPropagation()">
@@ -1424,6 +1444,11 @@
             <li>
                 <button class="menu-item" onclick="navegarA('vista-inventario'); cerrarMenu()">
                     <i data-lucide="package"></i><span>Inventario</span>
+                </button>
+            </li>
+            <li>
+                <button class="menu-item" onclick="irAVentasEnCurso()">
+                    <i data-lucide="shopping-bag"></i><span>Ventas en curso</span>
                 </button>
             </li>
             <li>

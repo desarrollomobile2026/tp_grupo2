@@ -1,11 +1,19 @@
 # Moniarquía — Estado Actual del Proyecto
 
-> Resumen ejecutivo. Actualizado: Junio 2026.
+> Resumen ejecutivo. Actualizado: 30 de junio de 2026.
 > Para detalles técnicos ver `docs/MONIARQUIA.md`.
 
 ---
 
 ## ✅ Qué funciona actualmente
+
+### Splash de presentación
+- Pantalla introductoria con logo, ícono de corazón y eslogan "VESTITE CON ONDA, VESTITE COMO QUIERAS."
+- Se muestra siempre al abrir o recargar la app, durante 2 segundos exactos
+- Forzada por JS (`splashPresentacionActivo`), no depende del HTML servido
+- Bloquea cualquier navegación automática mientras está activa
+- No se agrega al historial de navegación
+- Luego de los 2s, continúa con la lógica normal: sesión guardada → Home; sin sesión → pantalla de bienvenida/login
 
 ### Autenticación (simulada)
 - Login con dos usuarios mock: `admin@moniarquia.com` / `123456` y `empleado@moniarquia.com` / `123456`
@@ -16,6 +24,7 @@
 
 ### Home y navegación
 - Pantalla de inicio con botones "Iniciar venta" y "Consultar stock"
+- Card de alertas de stock bajo (fondo rojo), visible solo cuando hay productos afectados, ubicada entre el logo y los botones sin desplazarlos de su posición
 - Menú hamburguesa con todas las secciones
 - Botón volver con historial de navegación
 - Header consistente con título en todas las pantallas
@@ -28,9 +37,12 @@
 - Eliminación con confirmación
 - Búsqueda por nombre y filtro por categoría
 - Generación automática de QR (`codigoQR` en Firestore)
-- Visualización y descarga del QR en el formulario de edición
+- Botón "Descargar QR" dentro de la card del producto (debajo de talles/total) — único punto de acceso al QR
+- Chips de talla con indicador visual (fondo amarillo) cuando el stock está en o por debajo del mínimo configurado
+- Botón "Escanear producto" (solo admin) que abre directamente la edición del producto escaneado, sin pasar por el flujo de venta
 - **Empleados:** pueden ver inventario y modificar stock por talle (sin editar/eliminar productos)
 - **Administradores:** acceso CRUD completo
+- Las cards se regeneran automáticamente al cambiar de rol (login, restauración de sesión) — corrige una regresión donde quedaban con los botones del rol anterior
 
 ### Flujo de venta
 - Selección de producto con foto, descripción, selector de color (visual), selector de talle, cantidad
@@ -68,14 +80,24 @@
 - Mi perfil: ver nombre, email, rol, estado. Editar nombre y email.
 - Gestión de usuarios: CRUD visual completo con datos mock
 - Gestión de clientes: navega al módulo de clientes existente
+- Alertas de stock bajo (solo admin): activar/desactivar + definir stock mínimo por talle
 - Cambiar contraseña: flujo visual con validaciones
 - Cerrar sesión: limpia estado y navega al splash
 
+### Alertas de stock bajo
+- Configuración persistida en localStorage (`moniarquia_config_stock`): `{ activo, stockMinimo }`
+- Cálculo por talle (no por stock total del producto): cualquier talle con cantidad ≤ stockMínimo genera una alerta
+- Card roja en Home con la lista de productos/talles afectados y botón "Ver productos"
+- Chips amarillos en las cards del Inventario sobre los talles en alerta
+- Solo administradores pueden modificar la configuración; empleados solo visualizan las alertas
+
 ### QR (generación, descarga y escaneo)
 - `codigoQR: "MONIARQUIA_PRODUCTO_<idFirestore>"` guardado en Firestore
-- Canvas con el QR visible desde la **card del inventario** (modal) y como acceso secundario en el formulario de edición
-- Descarga como PNG de 300px (calidad para impresión) — disponible en el modal del inventario
+- El QR ya **no existe en el formulario "Editar producto"** — fue eliminado completamente de esa pantalla
+- Único acceso: botón "Descargar QR" en la card del inventario, debajo de la fila de talles/total, ancho completo
+- Descarga como PNG de 300px (calidad para impresión)
 - **Escaneo QR funcional** — cámara, loop de jsQR y búsqueda en Firestore operativos
+- El escaneo tiene comportamiento distinto según el origen: desde venta/carrito abre la selección de talle-color-cantidad; desde Inventario abre directamente la edición del producto
 - **Causa raíz del problema anterior resuelta:** el QR solo era accesible desde "Editar producto". Al reubicarlo en el inventario, el flujo se normalizó y el escaneo comenzó a funcionar.
 
 ---
@@ -158,9 +180,10 @@ El sistema QR (generación, descarga y escaneo) está funcionando correctamente.
 | `renderizarCatalogo()` / `renderizarFavoritos()` | Funciones del código base que ya no tienen pantalla activa. Candidatas a eliminar. |
 | Contraseñas en USUARIOS_MOCK | Hardcodeadas en el código fuente. Solo aceptable para demo, no para producción. |
 | `fun alta-foto`, `alta-nombre`, etc. | IDs del formulario de producto legacy comentados en HTML. Pueden eliminarse. |
-| `dbgFrames`, `dbgSinQRTimer`, panel `#escaner-status` | Variables y panel de debug del escáner. QR resuelto — pueden eliminarse o mantenerse como diagnóstico. |
+| ~~`dbgFrames`, `dbgSinQRTimer`, panel `#escaner-status`~~ | Eliminados — el código de diagnóstico del escáner ya fue removido (QR resuelto). |
+| `abrirModalQR()`, `modalDescargarQR()`, `#modal-qr-overlay` | Quedaron sin ningún botón que los invoque tras mover la descarga directa a la card del inventario. Candidatos a eliminar si no se reutilizan. |
 | Sin paginación | Las listas de clientes, productos y ventas cargan todos los documentos. Problema a escala. |
 
 ---
 
-*Estado actual — Junio 2026.*
+*Estado actual — Actualizado 30 de junio de 2026.*

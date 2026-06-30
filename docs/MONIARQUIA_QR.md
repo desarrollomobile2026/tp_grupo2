@@ -653,11 +653,11 @@ El formulario de edición conserva el QR como acceso secundario (sin eliminar).
 | Componente | Estado |
 |---|---|
 | QRious — generación de canvas | ✅ Funcional |
-| Descarga de PNG (300px) | ✅ Funcional — accesible desde Inventario |
+| Descarga de PNG (300px) | ✅ Funcional — único acceso: botón en la card del Inventario (ya no existe en "Editar producto") |
 | jsQR — lectura desde cámara | ✅ Funcional |
 | Escaneo → búsqueda en Firestore | ✅ Funcional |
-| Escaneo → apertura de pantalla de producto | ✅ Funcional |
-| Panel de diagnóstico `#escaner-status` | ✅ Funcional (puede mantenerse o eliminarse) |
+| Escaneo → destino según origen (venta/carrito → carrito; inventario → edición) | ✅ Funcional |
+| Panel de diagnóstico `#escaner-status` | 🗑️ Eliminado (30/06/2026) — ya no es necesario, el sistema es estable |
 
 ### Conclusión
 

@@ -1,6 +1,6 @@
 # Moniarquía — Hoja de ruta
 
-> Actualizado: Junio 2026.
+> Actualizado: 30 de junio de 2026.
 > Ordenado por prioridad de impacto en el flujo real de negocio.
 
 ---
@@ -111,14 +111,9 @@ Cambio o devolución
 
 ---
 
-### 8. Notificaciones de stock bajo
+### 8. ~~Notificaciones de stock bajo~~ ✅ Completado
 
-**Impacto:** Bajo — mejora la operación del showroom.
-**Esfuerzo estimado:** 2–3 horas.
-**Dependencias:** Ninguna.
-**Estado:** No implementado.
-
-Mostrar alerta visual cuando un talle tiene stock ≤ 2 al actualizar inventario.
+**Estado:** Implementado — configuración (activo/inactivo + stock mínimo) en Configuración (solo admin), card roja en Home y chips de alerta en Inventario, persistido en localStorage. Cálculo por talle, no por stock total.
 
 ---
 
@@ -162,6 +157,15 @@ Posible implementación: generar CSV o tabla HTML imprimible por fecha/período.
 
 ---
 
+### 13. Limpiar modal QR huérfano
+
+**Impacto:** Muy bajo — código sin uso, no afecta funcionalidad.
+**Esfuerzo estimado:** 15 minutos.
+**Dependencias:** Ninguna.
+**Estado:** `abrirModalQR()`, `modalDescargarQR()` y `#modal-qr-overlay` quedaron sin ningún botón que los invoque desde que la descarga del QR pasó a ser directa desde la card del inventario.
+
+---
+
 ## Resumen visual
 
 ```
@@ -177,12 +181,13 @@ Posible implementación: generar CSV o tabla HTML imprimible por fecha/período.
 
 🟢 MEJORAS FUTURAS
 ├── Cambio por otro producto
-├── Stock bajo → alertas
+├── ~~Stock bajo → alertas~~ ✅
 ├── Historial por producto
 ├── Offline / PWA
-└── Exportar reportes
+├── Exportar reportes
+└── Limpiar modal QR huérfano
 ```
 
 ---
 
-*Roadmap — Junio 2026.*
+*Roadmap — Actualizado 30 de junio de 2026.*

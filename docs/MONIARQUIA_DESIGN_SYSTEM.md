@@ -1,6 +1,6 @@
 # Moniarquía — Design System
 
-> Referencia visual del proyecto. Actualizado: Junio 2026.
+> Referencia visual del proyecto. Actualizado: 30 de junio de 2026.
 > Consultar siempre antes de agregar nuevas pantallas o componentes.
 
 ---
@@ -113,6 +113,8 @@
 | `package-plus` | Gestionar stock (empleados) |
 | `shield` | Cambiar rol |
 | `user-x`, `user-check` | Desactivar/activar usuario |
+| `alert-triangle` | Card de alertas de stock bajo (Home) |
+| `package-check` | Ítem "Alertas de stock bajo" en Configuración |
 
 > **Importante:** cuando Lucide reemplaza `<i data-lucide="X">` por `<svg>`, el SVG hereda la clase del `<i>`. Los selectores CSS deben apuntar al nombre de clase, no a `svg:first-child`.
 
@@ -248,6 +250,108 @@ El `data-vista` se actualiza en `navegarA(vistaId)`.
 - Usuarios: 40px, fondo `var(--rosa-viejo)` o `var(--rojo-moniarquia)` según rol
 - Perfil: 56px, fondo `var(--rojo-moniarquia)`
 
+### Card de alerta (stock bajo)
+
+Card de fondo rojo sólido para avisos críticos, usada en Home.
+
+```css
+.home-alerta-stock {
+    background-color: var(--rojo-moniarquia);
+    border-radius: 16px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow: var(--sombra);
+}
+```
+
+- Encabezado con ícono `alert-triangle` (blanco) + título en blanco 700
+- Lista de ítems con `max-height: 90px` y `overflow-y: auto` (se trunca si hay muchas alertas)
+- Botón "Ver productos" con fondo semitransparente (`rgba(255,255,255,0.2)`) y borde blanco translúcido
+- Oculta por defecto (`display:none`), visible solo cuando `calcularAlertasStock()` devuelve resultados
+
+**Patrón de layout — wrapper anclado al fondo:** cuando un elemento opcional (como esta alerta) debe aparecer *arriba* de unos botones que ya usan `margin-top: auto`, no agregar el elemento como hermano suelto — el margen automático se recalcula y los botones se desplazan. En su lugar, agrupar ambos en un wrapper y mover el `margin-top: auto` al wrapper:
+
+```css
+.home-bottom { display: flex; flex-direction: column; gap: 14px; margin-top: auto; }
+.home-cards  { display: flex; flex-direction: column; gap: 14px; } /* sin margin-top */
+```
+
+```html
+<div class="home-bottom">
+    <div id="home-alertas-stock" style="display:none;">...</div>
+    <div class="home-cards">...</div>
+</div>
+```
+
+Así, cuando la alerta está oculta, los botones quedan en la misma posición de siempre; cuando aparece, crece hacia arriba sin desplazar los botones.
+
+### Chip de talla en alerta
+
+Variante de `.inv-talla-chip` para indicar stock bajo en el Inventario.
+
+```css
+.inv-talla-chip.inv-chip-alerta {
+    background-color: #FEF3C7;
+    border-color: #F59E0B;
+}
+.inv-talla-chip.inv-chip-alerta span,
+.inv-talla-chip.inv-chip-alerta em { color: #92400E; }
+```
+
+### Toggle switch
+
+Switch ON/OFF reutilizable, usado en la configuración de alertas de stock.
+
+```css
+.toggle-switch { position: relative; width: 46px; height: 26px; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+.toggle-slider {
+    position: absolute; inset: 0; background-color: #ccc;
+    border-radius: 26px; cursor: pointer; transition: background-color 0.2s;
+}
+.toggle-slider::before {
+    content: ''; position: absolute; width: 20px; height: 20px;
+    left: 3px; bottom: 3px; background-color: #fff; border-radius: 50%;
+    transition: transform 0.2s;
+}
+.toggle-switch input:checked + .toggle-slider { background-color: var(--rojo-moniarquia); }
+.toggle-switch input:checked + .toggle-slider::before { transform: translateX(20px); }
+```
+
+```html
+<label class="toggle-switch">
+    <input type="checkbox" id="config-stock-activo">
+    <span class="toggle-slider"></span>
+</label>
+```
+
+### Splash de presentación
+
+Pantalla introductoria de 2 segundos, sin interacción del usuario. Reutiliza la estructura del logo de Home (`.logo-text`, `.sub-logo`, `.home-deco`) centrada vertical y horizontalmente.
+
+```css
+#vista-splash-presentacion {
+    background-color: var(--rosa-base);
+    align-items: center;
+    justify-content: center;
+    gap: 28px;
+    text-align: center;
+}
+```
+
+**Capa de refuerzo:** se agrega/quita una clase adicional durante la ventana de 2s para garantizar prioridad visual absoluta, independiente de cualquier otro elemento posicionado dentro de `#app-container`:
+
+```css
+.splash-presentacion-forzado {
+    display: flex !important;
+    position: absolute;
+    inset: 0;
+    z-index: 9999;
+}
+```
+
 ---
 
 ## 6. Patrones de navegación
@@ -256,8 +360,10 @@ El `data-vista` se actualiza en `navegarA(vistaId)`.
 
 | Vista | Back visible | Menú visible | Título header |
 |---|---|---|---|
+| Splash de presentación | ❌ oculto | ❌ oculto | — |
 | Home | ❌ oculto | ✅ | — |
 | Splash/Login/Registro | ❌ oculto | ❌ oculto | — |
+| Alertas de stock bajo (config) | ✅ | ✅ | "Alertas de stock bajo" |
 | Inventario | ✅ | ✅ | "Inventario" |
 | Carrito (venta) | ✅ | ✅ | "Carrito" |
 | Clientes | ✅ | ✅ | "Clientes" |
@@ -348,4 +454,4 @@ Genera inputs con IDs `inv-stock-S`, `inv-stock-M`, etc. (o números para pantal
 
 ---
 
-*Design System — Junio 2026.*
+*Design System — Actualizado 30 de junio de 2026.*

@@ -1,7 +1,7 @@
 # Moniarquía — Contexto para IA
 
 > **Documento de onboarding.** Leer este archivo antes de cualquier sesión de desarrollo.
-> Actualizado: Junio 2026 — Rama: `oscar` — Versión: 2.0
+> Actualizado: 30 de junio de 2026 — Rama: `oscar` — Versión: 2.1
 
 ---
 
@@ -38,21 +38,24 @@ El showroom operaba con anotaciones manuales y sin control de stock en tiempo re
 
 | Módulo | Estado | Observaciones |
 |---|---|---|
+| **Splash de presentación** | ✅ Implementado | Logo + eslogan, 2s, forzado por JS, bloquea navegación mientras dura. |
 | **Autenticación** | ⚠️ Parcial | Funciona con datos mock. Firebase Auth no activado. Ver sección 9. |
-| **Inicio / Home** | ✅ Implementado | Logo, menú, 2 cards de acción, avatar de perfil con rol. |
-| **Inventario** | ✅ Implementado | CRUD completo, filtros, selector visual de colores, stock por talla. |
-| **Escaneo de cámara** | ✅ Implementado | Cámara, loop jsQR y búsqueda en Firestore funcionan correctamente. |
+| **Inicio / Home** | ✅ Implementado | Logo, menú, 2 cards de acción, avatar de perfil con rol, card de alertas de stock bajo. |
+| **Inventario** | ✅ Implementado | CRUD completo, filtros, selector visual de colores, stock por talla, descarga de QR, chips de alerta de stock bajo. |
+| **Escaneo de cámara** | ✅ Implementado | Cámara, loop jsQR y búsqueda en Firestore funcionan correctamente. Comportamiento distinto según `origenEscaneo` (venta/carrito → carrito; inventario → edición). |
 | **Carrito** | ✅ Implementado | Selección de producto/talle/color/cantidad. Persiste en localStorage. |
 | **Ventas** | ✅ Implementado | Registro en Firestore, 3 métodos de pago, stock descontado atómicamente. |
 | **Clientes** | ✅ Implementado | Lista, alta, edición, eliminación. Buscador en tiempo real. |
 | **Cuenta corriente** | ✅ Implementado | Detalle, movimientos en tiempo real, pagos completos y parciales. |
 | **Pagos** | ✅ Implementado | Efectivo, Mercado Pago (externo), Cuenta corriente. |
 | **Cambios y devoluciones** | ⚠️ Parcial | Solo cambio de talle del mismo producto. Cambio por otro producto: pendiente. |
-| **Configuración** | ✅ Implementado | Mi perfil, Gestión usuarios, Gestión clientes, Cambiar contraseña, Logout. |
+| **Configuración** | ✅ Implementado | Mi perfil, Gestión usuarios, Gestión clientes, Alertas de stock bajo (solo admin), Cambiar contraseña, Logout. |
 | **Gestión de usuarios** | ⚠️ Parcial | CRUD visual completo. Datos en memoria, no en Firestore. |
-| **QR — generación** | ✅ Implementado | codigoQR en Firestore, canvas visible, descarga PNG. |
+| **QR — generación** | ✅ Implementado | codigoQR en Firestore. |
+| **QR — descarga** | ✅ Implementado | Único acceso: card del inventario. Eliminado del formulario "Editar producto". |
 | **QR — escaneo** | ✅ Implementado | Escaneo QR funcional. Causa raíz resuelta (ver sección 9 y `docs/MONIARQUIA_QR.md`). |
-| **Permisos por rol** | ✅ Implementado | Restricciones visuales: admin vs empleado. |
+| **Alertas de stock bajo** | ✅ Implementado | Configuración en localStorage, card en Home, chips en Inventario. Cálculo por talle. |
+| **Permisos por rol** | ✅ Implementado | Restricciones visuales: admin vs empleado. Bug de timing al cambiar de rol corregido (`aplicarRolUI()` re-renderiza el inventario). |
 
 ---
 
@@ -60,9 +63,9 @@ El showroom operaba con anotaciones manuales y sin control de stock en tiempo re
 
 ```
 tp_grupo2/
-├── index.html      ← TODAS las vistas (52 vistas en un solo archivo SPA)
+├── index.html      ← TODAS las vistas (54 vistas en un solo archivo SPA)
 ├── style.css       ← Design system + estilos de todos los componentes
-├── app.js          ← Toda la lógica: ~7800 líneas, 129 funciones
+├── app.js          ← Toda la lógica: ~3100 líneas, 137 funciones
 ├── config.js       ← Credenciales Firebase (projectId: moniarquiaapp)
 ├── README.md       ← Instrucciones básicas del código base original
 └── docs/
@@ -81,7 +84,7 @@ tp_grupo2/
 
 ### Responsabilidades de cada archivo
 
-**`index.html`:** Declara las 52 vistas como elementos `<main class="vista">`. Solo una está activa (`.active`). Contiene los CDN de Firebase, Lucide, QRious, jsQR. No contiene lógica.
+**`index.html`:** Declara las 54 vistas como elementos `<main class="vista">`. Solo una está activa (`.active`) — al cargar, `#vista-splash-presentacion` es la inicial. Contiene los CDN de Firebase, Lucide, QRious, jsQR. No contiene lógica.
 
 **`style.css`:** Design system completo. Variables CSS con los tokens de color (`--rojo-moniarquia: #FF6677`, etc.). Estilos de todos los componentes. El control de vistas activas usa `data-vista` en `#app-container`. No usar `!important` salvo en permisos por rol.
 
@@ -190,6 +193,8 @@ Antes de mergear cualquier cambio, verificar que estas funciones siguen operativ
 8. **Búsqueda manual de productos** — `buscarManualmente()` es el fallback cuando el QR no funciona. Siempre debe estar disponible en la pantalla de escaneo.
 9. **Inventario tiempo real** — El `onSnapshot` de `/productos` inicia en `DOMContentLoaded`. Si se desactiva o se rompe, el inventario y el flujo de venta quedan sin datos.
 10. **Selector de colores** — `coloresSeleccionados[]` es el estado del selector visual. Al abrir el formulario, `inicializarColorSelector(coloresExistentes)` debe resetear el estado correctamente.
+11. **Splash de presentación** — `splashPresentacionActivo` bloquea `navegarA()` durante los primeros 2 segundos. No quitar el guard de `navegarA()` ni reducir el `setTimeout` sin revisar que no rompa la secuencia splash → home/login.
+12. **Re-render del inventario al cambiar de rol** — `aplicarRolUI()` llama `renderizarInventario()` al final. Si se quita, los botones de editar/eliminar pueden quedar "congelados" con el rol del primer render (bug ya corregido, no reintroducirlo).
 
 ---
 
@@ -226,6 +231,18 @@ Firebase Auth fue implementado y luego revertido. El sistema actual usa:
 - `sesionActual` en localStorage — `{ nombre, correo, rol }` (sin contraseña)
 - Funciones con comentarios `// TODO: reemplazar por firebase.auth()...`
 
+### Escaneo QR según origen
+La variable `origenEscaneo` (`'venta' | 'carrito' | 'inventario' | null`) se setea en `abrirEscaneo(origen)` y se lee en `procesarCodigoQR()` para decidir el destino: `abrirProducto(id)` (flujo de venta) o `abrirFormProducto(id)` (edición directa desde Inventario). Antes de esto, el botón de escaneo del Inventario reusaba el mismo flujo que "Iniciar venta", lo cual era incorrecto — escanear un producto desde Inventario debía abrir su edición, no agregarlo a un carrito.
+
+### Alertas de stock bajo en localStorage
+Ver el detalle de la decisión en `docs/MONIARQUIA.md` sección 4. En resumen: configuración del negocio (no por-usuario), sincrónica, sin tocar Firestore. La alerta se evalúa por talle (`cant <= configStock.stockMinimo`), no por el stock total del producto.
+
+### Splash de presentación forzado por JS, no solo por HTML
+La primera implementación dependía de que el HTML llegara con `class="vista active"` ya puesta en `#vista-splash-presentacion`. Se reforzó para que el propio `DOMContentLoaded` fuerce ese estado por JavaScript (clase `.active` + `.splash-presentacion-forzado` con `z-index:9999`) y bloquee `navegarA()` con `splashPresentacionActivo` durante 2000ms. Esto elimina cualquier dependencia de que el HTML servido ya venga en el estado correcto.
+
+### Bug de timing en permisos por rol (corregido)
+`renderizarInventario()` se dispara desde el `onSnapshot` de productos, que puede ejecutarse **antes** de que `sesionActual` esté cargada (al iniciar la app sin sesión guardada). El template de la card quedaba "congelado" con los botones de empleado aunque el usuario fuera admin. Se corrigió agregando `renderizarInventario()` al final de `aplicarRolUI()`, que se llama en cada login y en la restauración de sesión — garantiza que el inventario se re-renderice con el rol correcto.
+
 ### Desarrollo por iteraciones pequeñas
 Se usó una metodología de etapas (1 a 8+). Cada etapa agrega funcionalidad sin romper la anterior. Los cambios deben ser presentados ANTES de implementarlos y esperar confirmación. Ver `docs/00_REGLAS_DESARROLLO.md`.
 
@@ -235,21 +252,23 @@ Se usó una metodología de etapas (1 a 8+). Cada etapa agrega funcionalidad sin
 
 ### ✅ Qué funciona
 
+- Splash de presentación (2s, forzado por JS) al abrir/recargar la app
 - Login/logout con usuarios demo (simulado)
-- Home con permisos visuales por rol
-- Inventario completo (CRUD, filtros, colores visual, stock por talla, QR)
+- Home con permisos visuales por rol + card de alertas de stock bajo
+- Inventario completo (CRUD, filtros, colores visual, stock por talla, descarga de QR, chips de alerta)
+- Escaneo QR funcional, con comportamiento distinto según el origen (venta/carrito vs. inventario)
 - Flujo de venta completo (selección → carrito → cliente → pago → confirmación)
 - Tres métodos de pago con registro en Firestore
 - Módulo de clientes completo (lista, alta, edición, eliminación)
 - Cuenta corriente (deuda, pagos, historial en tiempo real)
 - Cambios y devoluciones (cambio de talle, actualización de stock atómica)
-- Configuración completa (Mi perfil, Gestión usuarios visual, Cambiar contraseña)
-- Generación y descarga de QR por producto
-- Panel de diagnóstico en pantalla de escaneo
+- Configuración completa (Mi perfil, Gestión usuarios visual, Alertas de stock bajo, Cambiar contraseña)
+- Generación y descarga de QR por producto (único acceso: card del Inventario)
+- Sistema de alertas de stock bajo (configuración, Home, Inventario)
+- Permisos por rol consistentes incluso al cambiar de usuario sin recargar la página
 
 ### ⚠️ Parcialmente implementado
 
-- **Escaneo QR:** ✅ funcional. La causa raíz del problema anterior fue la ubicación del QR dentro de "Editar producto". Al reubicarlo en el inventario (modal desde la card), el escaneo comenzó a funcionar correctamente.
 - **Autenticación:** funciona con mock; no conectada a Firebase Auth real
 - **Gestión de usuarios:** UI completa pero datos en memoria (no Firestore)
 - **Cambios y devoluciones:** solo cambio de talle del mismo producto
@@ -257,11 +276,11 @@ Se usó una metodología de etapas (1 a 8+). Cada etapa agrega funcionalidad sin
 ### ❌ Pendiente
 
 - Firebase Auth real habilitado en consola
-- ~~Escaneo QR funcional en iPhone~~ ✅ Resuelto
 - Gestión de usuarios conectada a Firestore
 - Recuperación de contraseña real (requiere Auth)
 - Reglas de seguridad en Firestore (actualmente abiertas)
 - Cambio por otro producto en C&D
+- Limpieza del modal QR huérfano (`abrirModalQR()`, `modalDescargarQR()`, `#modal-qr-overlay` sin invocadores)
 
 ---
 
@@ -269,19 +288,35 @@ Se usó una metodología de etapas (1 a 8+). Cada etapa agrega funcionalidad sin
 
 ### ~~1. 🔴 Escaneo QR no funcional en iPhone~~ ✅ Resuelto
 
-**Causa raíz identificada (Junio 2026):**
+**Causa raíz identificada:**
 El problema no era técnico. El QR solo era accesible desde el formulario "Editar producto". Al descargar y luego guardar el producto desde ese formulario, se producía un estado inconsistente que afectaba el escaneo.
 
-**Solución implementada:**
-El acceso al QR se reubicó en el inventario (botón en cada card → modal con canvas + descarga). El formulario de edición conserva el QR como acceso secundario.
+**Solución implementada (estado final):**
+El acceso al QR se reubicó en el inventario — botón "Descargar QR" de ancho completo dentro de cada card, debajo de talles/total, que descarga directamente sin pasar por un modal intermedio. El QR fue eliminado por completo del formulario de edición (ya no existe ahí ni como acceso secundario).
 
-**Resultado:** jsQR, la cámara y la búsqueda en Firestore funcionan correctamente. Sistema QR estable.
+**Resultado:** jsQR, la cámara y la búsqueda en Firestore funcionan correctamente. Sistema QR estable. Además, se diferenció el comportamiento del escaneo según el origen: desde Inventario abre la edición del producto; desde venta/carrito abre la selección para agregar al carrito.
 
 Ver `docs/MONIARQUIA_QR.md` sección de resolución final para el detalle completo.
 
 ---
 
-### 2. 🟡 Firebase Auth no activo
+### ~~2. 🟡 Botones editar/eliminar desaparecían en Inventario~~ ✅ Resuelto
+
+**Causa raíz:** `renderizarInventario()` se ejecuta desde el `onSnapshot` de productos, que puede dispararse antes de que `sesionActual` esté cargada. El template quedaba "congelado" con los botones de empleado aunque el usuario fuera admin, porque nada volvía a renderizar el inventario después del login.
+
+**Solución:** se agregó `renderizarInventario()` al final de `aplicarRolUI()`, que se llama en cada login y restauración de sesión.
+
+---
+
+### ~~3. 🟡 Splash de presentación no se mostraba~~ ✅ Resuelto
+
+**Causa raíz:** la primera versión dependía de que el HTML llegara con la clase `active` ya puesta en `#vista-splash-presentacion`. Tras descartar caché de navegador, se confirmó que el verdadero problema era que los cambios nunca habían sido commiteados/pusheados al repositorio que alimenta el hosting — el sitio desplegado no tenía la implementación.
+
+**Solución:** además de hacer commit y push de los cambios, se reforzó la implementación para que ya no dependa solo del HTML: `DOMContentLoaded` fuerza el estado del splash por JS (`splashPresentacionActivo`, clase `.splash-presentacion-forzado` con `z-index:9999`) y bloquea `navegarA()` durante 2000ms.
+
+---
+
+### 4. 🟡 Firebase Auth no activo
 
 **Síntoma:** El login funciona con datos hardcodeados. Si se pierde la sesión en localStorage, el acceso vuelve al splash pero no hay un backend real que valide identidades.
 
@@ -292,7 +327,7 @@ Ver `docs/MONIARQUIA_QR.md` sección de resolución final para el detalle comple
 
 ---
 
-### 3. 🟡 Gestión de usuarios sin persistencia
+### 5. 🟡 Gestión de usuarios sin persistencia
 
 **Síntoma:** Los usuarios creados desde Configuración desaparecen al recargar la app.
 
@@ -302,60 +337,32 @@ Ver `docs/MONIARQUIA_QR.md` sección de resolución final para el detalle comple
 
 ## 10. Última iteración realizada
 
-**Fecha:** Junio 2026
+**Fecha:** 30 de junio de 2026
 
 **Qué se desarrolló:**
-1. Sistema completo de generación y descarga de QR por producto
-2. Integración de jsQR para lectura de QR desde la cámara
-3. Múltiples correcciones al loop de escaneo (readyState, inversionAttempts, play(), onloadedmetadata)
-4. Panel de diagnóstico inline en la pantalla de escaneo
-5. Botones "Reintentar escaneo" y "Volver al carrito" en el escáner
-6. Documentación completa del proyecto (8 archivos .md)
-7. Ajustes de UI/UX: spacing, responsive, headers consistentes
-8. Permisos por rol visuales
-9. Botón de escaneo en inventario (solo admin)
-10. Gestión de clientes completa (CRUD)
-11. Configuración completa (Mi perfil, Gestión usuarios, etc.)
+1. Limpieza final del módulo QR: eliminado el código de diagnóstico del escáner (`actualizarDebugEscaneo()`, panel `#escaner-status`, variables `dbgFrames`/`dbgSinQRTimer`)
+2. Reubicación definitiva del botón "Descargar QR": de un modal en Inventario, a un botón de ancho completo dentro de cada card (debajo de talles/total) con descarga directa, sin modal
+3. Eliminación completa del bloque QR del formulario "Editar producto" (varias iteraciones de ida y vuelta hasta confirmar el estado final correcto)
+4. Escaneo QR con comportamiento según origen: `origenEscaneo` (`'venta' | 'carrito' | 'inventario'`) determina si el QR detectado abre el carrito de venta o la edición directa del producto
+5. Corrección de una regresión: los botones editar/eliminar desaparecían de las cards del Inventario por un bug de timing entre `onSnapshot` y la carga de la sesión — resuelto agregando `renderizarInventario()` a `aplicarRolUI()`
+6. Sistema completo de alertas de stock bajo: configuración (activo/inactivo + stock mínimo) en Configuración (solo admin), persistida en localStorage; card roja en Home; chips de alerta en Inventario; cálculo por talle
+7. Corrección de layout en Home: la card de alertas de stock empujaba los botones "Iniciar venta"/"Consultar stock" fuera de la zona ergonómica — resuelto agrupando alerta + botones en un wrapper `.home-bottom` con `margin-top: auto`
+8. Splash screen de presentación: nueva vista `#vista-splash-presentacion` (logo + eslogan) visible 2 segundos al iniciar/recargar, forzada por JS con guard en `navegarA()`
+9. Commit y push a `origin/oscar` — los cambios del splash no se reflejaban en el hosting porque nunca habían sido subidos al repositorio
 
 **Archivos modificados en la última sesión:**
-- `index.html` — vista de escaneo rediseñada, panel de estado inline
-- `style.css` — panel de diagnóstico, escaner-status, responsive fixes
-- `app.js` — `iniciarEscaneoLoop()`, `procesarCodigoQR()`, `actualizarDebugEscaneo()`, `reintentarEscaneo()`, `volverAlCarritoDesdeEscaneo()`
-- `docs/*.md` — 4 archivos creados, 2 actualizados
+- `index.html` — vista de escaneo simplificada (sin panel de debug), card de alertas en Home, vista `#vista-config-stock`, vista `#vista-splash-presentacion`, botón de escaneo en Inventario con origen explícito
+- `style.css` — estilos de card de alertas, chips de alerta, toggle switch, vista de configuración de stock, splash de presentación, wrapper `.home-bottom`
+- `app.js` — `descargarQRDesdeInventario()`, `calcularAlertasStock()`, `renderizarAlertasHome()`, `abrirConfigStock()`, `guardarConfigStockForm()`, `cargarConfigStock()`/`guardarConfigStock()`, `origenEscaneo` en `procesarCodigoQR()`, `splashPresentacionActivo` + guard en `navegarA()`, `aplicarRolUI()` actualizada
+- `docs/*.md` — actualización de toda la documentación existente (este archivo incluido)
 
-**Resultado:** El sistema QR está completo y funcional — generación, descarga desde el inventario y escaneo funcionan correctamente. La causa raíz del problema de escaneo fue la ubicación del QR en "Editar producto" (no un problema técnico de jsQR ni de iOS).
+**Resultado:** El sistema QR se considera estable y cerrado. Se sumó un módulo nuevo completo (alertas de stock bajo) y una pantalla nueva (splash de presentación). Los cambios están commiteados y pusheados a `oscar`.
 
 ---
 
 ## 11. Próxima iteración recomendada
 
-### Opción A (recomendada): Resolver escaneo QR
-
-**Objetivo:** Confirmar en cuál eslabón falla el flujo de escaneo y corregirlo.
-
-**Dependencias:** Ninguna externa.
-
-**Archivos a modificar:** Solo `app.js` (funciones de cámara).
-
-**Pasos:**
-1. Abrir la app en iPhone y entrar a "Iniciar venta"
-2. Observar el panel de diagnóstico en la pantalla:
-   - Si `FRAMES = 0` después de 3 segundos → el video no entrega datos → cambiar condición de readyState o agregar evento `timeupdate`
-   - Si `FRAMES` sube pero `QR = ninguno` → jsQR no decodifica → probar jsQR como archivo local (no CDN), o implementar `BarcodeDetector` nativa
-   - Si `QR` tiene texto → ese texto NO pasa `startsWith(PREFIJO_QR)` → comparar manualmente
-3. Alternativa rápida — implementar `BarcodeDetector` para iOS 17+:
-   ```js
-   if ('BarcodeDetector' in window) {
-       const detector = new BarcodeDetector({ formats: ['qr_code'] });
-       detector.detect(videoEl).then(barcodes => {
-           if (barcodes[0]) procesarCodigoQR(barcodes[0].rawValue);
-       });
-   }
-   ```
-
-**Riesgos:** Bajo. Solo se modifica el loop de escaneo, no el carrito ni el inventario.
-
-### Opción B: Activar Firebase Auth
+### Opción A (recomendada): Activar Firebase Auth
 
 **Objetivo:** Reemplazar autenticación simulada por Firebase Auth real.
 
@@ -364,6 +371,18 @@ Ver `docs/MONIARQUIA_QR.md` sección de resolución final para el detalle comple
 **Archivos a modificar:** `index.html` (agregar SDK), `app.js` (reemplazar funciones simuladas), `config.js` (agregar `firebase.auth()`).
 
 **Ver:** `docs/MONIARQUIA_FIREBASE.md` sección 3 para el código exacto.
+
+### Opción B: Conectar Gestión de usuarios a Firestore
+
+**Objetivo:** Reemplazar `usuariosLocales[]` por una colección real, una vez que Firebase Auth esté activo (depende de la Opción A).
+
+**Archivos a modificar:** `app.js` (funciones de gestión de usuarios).
+
+### Opción C: Limpieza de código huérfano
+
+**Objetivo:** Eliminar `abrirModalQR()`, `modalDescargarQR()` y `#modal-qr-overlay`, que quedaron sin ningún botón que los invoque tras la reubicación de la descarga del QR.
+
+**Riesgo:** Muy bajo — es código sin uso, no afecta ningún flujo activo.
 
 ---
 
@@ -420,36 +439,35 @@ volverAtras(); // pop del historial o va al home si está vacío
 | **`MONIARQUIA_DESIGN_SYSTEM.md`** | Colores, tipografía, componentes, UX móvil | Al crear nuevas pantallas |
 | **`MONIARQUIA_Flujos.md`** | 22 flujos de navegación con diagramas textuales | Al implementar un flujo nuevo |
 | **`MONIARQUIA_QR.md`** | Bitácora técnica completa del sistema QR | Al continuar el desarrollo del QR |
-| **`MONIARQUIA_ROADMAP.md`** | Hoja de ruta priorizada con 12 ítems | Al decidir qué hacer a continuación |
+| **`MONIARQUIA_ROADMAP.md`** | Hoja de ruta priorizada con 13 ítems | Al decidir qué hacer a continuación |
 | **`00_REGLAS_DESARROLLO.md`** | Metodología de trabajo, rama, etapas | Como referencia de proceso |
 
 ---
 
 ## 14. Punto exacto donde se detuvo el proyecto
 
-**Fecha de parada:** Junio 2026
+**Fecha de parada:** 30 de junio de 2026
 
-**Qué estaba en desarrollo:** El sistema de códigos QR para productos.
+**Qué estaba en desarrollo:** Cierre del módulo QR, sistema de alertas de stock bajo y splash de presentación.
 
 **Lo que funciona hoy:**
-- La app genera automáticamente un código QR (`MONIARQUIA_PRODUCTO_<idFirestore>`) al crear un producto
-- El QR se visualiza en el formulario de edición del producto
-- El QR se puede descargar como PNG de 300px
-- La pantalla de escaneo abre la cámara correctamente
-- El panel de diagnóstico muestra el estado del loop en pantalla
-- Los botones "Reintentar escaneo" y "Buscar manualmente" funcionan
+- Sistema QR completo y estable: generación automática, descarga única desde la card del Inventario, escaneo funcional con comportamiento según origen (venta/carrito vs. inventario)
+- Sistema de alertas de stock bajo completo: configuración (solo admin), card en Home, chips en Inventario
+- Splash de presentación funcional: se muestra 2 segundos al abrir/recargar, forzado por JS, no depende del estado inicial del HTML
+- Cambios commiteados y pusheados a `origin/oscar` (el hosting debería reflejar estos cambios según su flujo de deploy configurado)
 
-**Lo que no funciona:**
-El escáner no detecta el QR cuando se apunta la cámara a la etiqueta descargada. La causa exacta no ha sido confirmada — puede ser que jsQR no cargue desde el CDN, que el video no entregue frames en iOS, o que el texto leído tenga un formato inesperado.
+**Lo que no funciona / queda pendiente:**
+- Firebase Auth sigue simulado (no activado en consola)
+- Gestión de usuarios sigue en memoria, no en Firestore
+- `abrirModalQR()`, `modalDescargarQR()` y `#modal-qr-overlay` quedaron como código huérfano (sin invocadores) tras simplificar la descarga del QR a un botón directo
 
 **Consecuencia práctica:**
-El flujo "Escanear QR → identificar producto → abrir pantalla de selección → agregar al carrito" no funciona en iPhone. El fallback "Buscar manualmente" sí funciona y permite completar la venta.
+Ninguna funcionalidad crítica está bloqueada. Lo pendiente es expansión (Firebase Auth real) o limpieza menor (código huérfano), no bugs activos.
 
 **Qué hacer al retomar:**
-1. Abrir la app en iPhone y entrar a "Iniciar venta"
-2. Observar los valores del panel de diagnóstico (`CAM`, `LOOP`, `FRAMES`, `QR`)
-3. Reportar esos valores para decidir cuál es el problema real
-4. Seguir los pasos de `docs/MONIARQUIA_QR.md` sección 10
+1. Confirmar que el hosting ya refleja el último push (`git log --oneline -3` debería mostrar el commit del splash screen como el más reciente o cercano)
+2. Si se va a continuar el desarrollo, ver `docs/MONIARQUIA_ROADMAP.md` para elegir el siguiente ítem por prioridad
+3. Seguir la metodología de `docs/00_REGLAS_DESARROLLO.md`: presentar el plan antes de implementar, esperar aprobación
 
 ---
 
@@ -457,16 +475,16 @@ El flujo "Escanear QR → identificar producto → abrir pantalla de selección 
 
 | Campo | Valor |
 |---|---|
-| **Fecha de actualización** | Junio 2026 |
+| **Fecha de actualización** | 30 de junio de 2026 |
 | **Rama activa** | `oscar` |
-| **Versión del proyecto** | 2.0 |
-| **Vistas en la app** | 52 vistas declaradas en `index.html` |
-| **Funciones en app.js** | ~129 funciones, ~7800 líneas |
+| **Versión del proyecto** | 2.1 |
+| **Vistas en la app** | 54 vistas declaradas en `index.html` |
+| **Funciones en app.js** | ~137 funciones, ~3100 líneas |
 | **Colecciones Firebase activas** | productos, clientes, ventas, cuentaCorriente, cambios |
 | **Firebase Auth** | NO activo — simulado en localStorage |
 | **Firebase Storage** | NO activo — eliminado |
-| **Última iteración documentada** | Generación/lectura QR + documentación completa |
-| **Próxima iteración recomendada** | Resolver escaneo QR en iPhone (ver sección 11) |
+| **Última iteración documentada** | Cierre del módulo QR, alertas de stock bajo, splash de presentación |
+| **Próxima iteración recomendada** | Activar Firebase Auth real (ver sección 11) |
 
 ---
 

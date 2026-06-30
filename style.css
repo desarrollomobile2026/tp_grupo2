@@ -68,6 +68,7 @@ body {
 /* Título del header para Gestionar stock */
 #app-container[data-vista="vista-gestionar-stock"] .header-titulo--gestionar-stock { display: block; }
 #app-container[data-vista="vista-config-stock"]    .header-titulo--config-stock    { display: block; }
+#app-container[data-vista="vista-ventas-en-curso"] .header-titulo--ventas-en-curso { display: block; }
 
 /* Vista gestionar stock */
 #vista-gestionar-stock { gap: 16px; }
@@ -820,6 +821,115 @@ body {
     font-weight: 400;
     line-height: 1.4;
 }
+
+/* ── CARD DE VENTA EN CURSO (Home) ───────────────────────────────────────── */
+.home-venta-curso {
+    background-color: var(--rosa-viejo);
+    border: none;
+    border-radius: 16px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: var(--sombra);
+    width: 100%;
+    cursor: pointer;
+    text-align: left;
+    font-family: 'Inter', sans-serif;
+}
+
+.home-venta-curso-icono {
+    background-color: var(--blanco);
+    width: 40px;
+    height: 40px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.home-venta-curso-icono svg { width: 20px; height: 20px; stroke: var(--rojo-moniarquia); }
+
+.home-venta-curso-texto {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.home-venta-curso-titulo {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--negro-texto);
+}
+
+.home-venta-curso-resumen {
+    font-size: 12px;
+    color: var(--negro-texto);
+    opacity: 0.75;
+}
+
+.home-venta-curso-chevron {
+    width: 18px;
+    height: 18px;
+    stroke: var(--negro-texto);
+    flex-shrink: 0;
+}
+
+/* ── VISTA: VENTAS EN CURSO (menú) ───────────────────────────────────────── */
+.ventas-curso-vacio {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--gris);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+}
+
+.ventas-curso-vacio svg {
+    width: 40px;
+    height: 40px;
+    stroke: var(--gris);
+}
+
+.ventas-curso-vacio p { font-size: 14px; line-height: 1.5; }
+
+.ventas-curso-card {
+    background-color: var(--blanco);
+    border: 1px solid var(--negro-pleno);
+    border-radius: 14px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    box-shadow: var(--sombra);
+}
+
+.ventas-curso-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.ventas-curso-card-icono {
+    background-color: var(--rosa-base);
+    width: 44px;
+    height: 44px;
+    border-radius: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.ventas-curso-card-icono svg { width: 22px; height: 22px; stroke: var(--rojo-moniarquia); }
+
+.ventas-curso-card-titulo { font-size: 15px; font-weight: 700; color: var(--negro-texto); }
+.ventas-curso-card-meta   { font-size: 12px; color: var(--gris); margin-top: 2px; }
+.ventas-curso-card-total  { font-size: 18px; font-weight: 700; color: var(--rojo-moniarquia); }
 
 /* ── CARD DE ALERTAS DE STOCK BAJO (Home) ────────────────────────────────── */
 .home-alerta-stock {

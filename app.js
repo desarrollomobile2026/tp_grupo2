@@ -197,6 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     actualizarBadgeCarrito();
     renderizarCarrito();
+    renderizarVentaEnCursoHome();
 
     // ESCUCHA EN TIEMPO REAL: db.collection().onSnapshot()
     db.collection('productos').onSnapshot((snapshot) => {
@@ -1645,6 +1646,74 @@ function agregarAlCarritoVenta() {
 
 function sincronizarCarritoVenta() {
     localStorage.setItem('moniarquia_carrito_venta', JSON.stringify(carritoVenta));
+    renderizarVentaEnCursoHome();
+}
+
+// ── VENTA EN CURSO (Home + Menú) ─────────────────────────────────────────────
+// Reutiliza carritoVenta[] existente — no hay nueva estructura de datos.
+// Solo puede haber 0 o 1 venta en curso por dispositivo.
+
+function resumenCarritoVenta() {
+    const cantidadItems = carritoVenta.reduce((s, i) => s + (i.cantidad || 1), 0);
+    const total = carritoVenta.reduce((s, i) => s + (i.precio || 0) * (i.cantidad || 1), 0);
+    return { cantidadItems, total };
+}
+
+function renderizarVentaEnCursoHome() {
+    const card = document.getElementById('home-venta-curso');
+    const resumenEl = document.getElementById('home-venta-curso-resumen');
+    if (!card) return;
+
+    if (carritoVenta.length === 0) {
+        card.style.display = 'none';
+        return;
+    }
+
+    const { cantidadItems, total } = resumenCarritoVenta();
+    if (resumenEl) {
+        resumenEl.textContent = `${cantidadItems} producto${cantidadItems === 1 ? '' : 's'} · $ ${total.toLocaleString('es-AR')}`;
+    }
+    card.style.display = 'flex';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function renderizarVentasEnCurso() {
+    const cont = document.getElementById('ventas-curso-contenido');
+    if (!cont) return;
+
+    if (carritoVenta.length === 0) {
+        cont.innerHTML = `
+            <div class="ventas-curso-vacio">
+                <i data-lucide="shopping-bag"></i>
+                <p>No tenés ventas en curso.<br>Iniciá una venta para verla acá.</p>
+                <button class="btn-primary" style="width:auto;padding:12px 24px;" onclick="abrirEscaneo()">Iniciar venta</button>
+            </div>`;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        return;
+    }
+
+    const { cantidadItems, total } = resumenCarritoVenta();
+    cont.innerHTML = `
+        <div class="ventas-curso-card">
+            <div class="ventas-curso-card-header">
+                <div class="ventas-curso-card-icono">
+                    <i data-lucide="shopping-cart"></i>
+                </div>
+                <div>
+                    <p class="ventas-curso-card-titulo">Venta en curso</p>
+                    <p class="ventas-curso-card-meta">${cantidadItems} producto${cantidadItems === 1 ? '' : 's'}</p>
+                </div>
+            </div>
+            <p class="ventas-curso-card-total">$ ${total.toLocaleString('es-AR')}</p>
+            <button class="btn-primary" onclick="navegarA('vista-carrito-venta')">Continuar venta</button>
+        </div>`;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function irAVentasEnCurso() {
+    renderizarVentasEnCurso();
+    navegarA('vista-ventas-en-curso');
+    cerrarMenu();
 }
 
 function quitarDelCarritoVenta(cartId) {
