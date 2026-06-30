@@ -69,6 +69,8 @@ body {
 #app-container[data-vista="vista-gestionar-stock"] .header-titulo--gestionar-stock { display: block; }
 #app-container[data-vista="vista-config-stock"]    .header-titulo--config-stock    { display: block; }
 #app-container[data-vista="vista-ventas-en-curso"] .header-titulo--ventas-en-curso { display: block; }
+#app-container[data-vista="vista-historial-ventas"] .header-titulo--historial-ventas { display: block; }
+#app-container[data-vista="vista-detalle-venta"]    .header-titulo--detalle-venta    { display: block; }
 
 /* Vista gestionar stock */
 #vista-gestionar-stock { gap: 16px; }
@@ -930,6 +932,84 @@ body {
 .ventas-curso-card-titulo { font-size: 15px; font-weight: 700; color: var(--negro-texto); }
 .ventas-curso-card-meta   { font-size: 12px; color: var(--gris); margin-top: 2px; }
 .ventas-curso-card-total  { font-size: 18px; font-weight: 700; color: var(--rojo-moniarquia); }
+
+/* ── VISTA: DETALLE DE VENTA (ticket) ────────────────────────────────────── */
+.detalle-venta-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+
+.detalle-venta-ticket {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--negro-texto);
+    font-family: 'Courier New', monospace;
+}
+
+.detalle-venta-fecha {
+    font-size: 12px;
+    color: var(--gris);
+}
+
+.detalle-venta-card {
+    background-color: var(--blanco);
+    border: 1px solid var(--negro-pleno);
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow: var(--sombra);
+    margin-bottom: 16px;
+}
+
+.detalle-venta-fila {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+}
+
+.detalle-venta-fila span  { color: var(--gris); }
+.detalle-venta-fila strong { color: var(--negro-texto); font-weight: 600; text-align: right; }
+
+.detalle-venta-productos {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.detalle-venta-item {
+    background-color: var(--blanco);
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.detalle-venta-item-texto { flex: 1; min-width: 0; }
+.detalle-venta-item-nombre { font-size: 14px; font-weight: 700; color: var(--negro-texto); }
+.detalle-venta-item-meta   { font-size: 12px; color: var(--gris); margin-top: 2px; }
+.detalle-venta-item-precio { font-size: 14px; font-weight: 700; color: var(--negro-texto); flex-shrink: 0; }
+
+.detalle-venta-total {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background-color: var(--rosa-base);
+    border-radius: 12px;
+    font-size: 15px;
+}
+
+.detalle-venta-total span   { color: var(--negro-texto); font-weight: 600; }
+.detalle-venta-total strong { color: var(--rojo-moniarquia); font-size: 20px; font-weight: 700; }
 
 /* ── CARD DE ALERTAS DE STOCK BAJO (Home) ────────────────────────────────── */
 .home-alerta-stock {

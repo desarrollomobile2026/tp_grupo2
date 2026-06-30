@@ -69,6 +69,8 @@
         <span class="header-titulo header-titulo--gestionar-stock">Gestionar stock</span>
         <span class="header-titulo header-titulo--config-stock">Alertas de stock bajo</span>
         <span class="header-titulo header-titulo--ventas-en-curso">Ventas en curso</span>
+        <span class="header-titulo header-titulo--historial-ventas">Historial de ventas</span>
+        <span class="header-titulo header-titulo--detalle-venta">Detalle de venta</span>
         <button class="btn-nav" id="btn-menu" onclick="abrirMenu()">
             <i data-lucide="menu"></i>
         </button>
@@ -1414,6 +1416,25 @@
         <div id="ventas-curso-contenido"></div>
     </main>
 
+    <!-- Vista: Historial de ventas -->
+    <main id="vista-historial-ventas" class="vista">
+        <h2 class="section-title">Historial de ventas</h2>
+        <div class="search-box">
+            <i data-lucide="search" class="search-lucide-icon"></i>
+            <input type="text" id="historial-ventas-busqueda"
+                   placeholder="Buscar por ticket, cliente o vendedor..."
+                   oninput="buscarHistorialVentas()">
+        </div>
+        <div id="historial-ventas-lista">
+            <p class="cargando">Cargando ventas...</p>
+        </div>
+    </main>
+
+    <!-- Vista: Detalle de venta -->
+    <main id="vista-detalle-venta" class="vista">
+        <div id="detalle-venta-contenido"></div>
+    </main>
+
     <!-- Modal de QR del producto -->
     <div id="modal-qr-overlay" class="modal-qr-overlay" style="display:none;" onclick="cerrarModalQR()">
         <div class="modal-qr-panel" onclick="event.stopPropagation()">
@@ -1449,6 +1470,11 @@
             <li>
                 <button class="menu-item" onclick="irAVentasEnCurso()">
                     <i data-lucide="shopping-bag"></i><span>Ventas en curso</span>
+                </button>
+            </li>
+            <li>
+                <button class="menu-item" onclick="irAHistorialVentas()">
+                    <i data-lucide="receipt"></i><span>Historial de ventas</span>
                 </button>
             </li>
             <li>

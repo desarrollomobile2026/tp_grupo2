@@ -1627,14 +1627,15 @@ function agregarAlCarritoVenta() {
     }
 
     carritoVenta.push({
-        cartId:   Date.now() + Math.random(),
-        id:       productoActual.id,
-        nombre:   productoActual.nombre,
-        precio:   productoActual.precio,
-        talla:    tallaSeleccionada  || '',
-        color:    colorSeleccionado  || '',
-        cantidad: cantidadSeleccionada,
-        foto:     obtenerFotoProducto(productoActual),
+        cartId:    Date.now() + Math.random(),
+        id:        productoActual.id,
+        nombre:    productoActual.nombre,
+        precio:    productoActual.precio,
+        talla:     tallaSeleccionada  || '',
+        color:     colorSeleccionado  || '',
+        cantidad:  cantidadSeleccionada,
+        foto:      obtenerFotoProducto(productoActual),
+        categoria: productoActual.categoria || '', // snapshot para el historial de ventas
     });
 
     sincronizarCarritoVenta();
@@ -2118,7 +2119,13 @@ function registrarVenta({ metodoPago, montoAbonado, deuda, estado }) {
     const btnActivo    = btnConfirmar || btnDeuda;
     if (btnActivo) { btnActivo.disabled = true; btnActivo.textContent = 'Registrando...'; }
 
+    // Usamos batch para atomicidad: venta + stock + (deuda si aplica)
+    const batch    = db.batch();
+    const ventaRef = db.collection('ventas').doc(); // se genera antes para poder denormalizar idVenta
+    const ahora    = firebase.firestore.FieldValue.serverTimestamp();
+
     const ventaData = {
+        // ── Campos existentes — sin cambios de significado ──
         clienteId: clienteSeleccionado?.id || null,
         items: carritoVenta.map(i => ({
             productoId:     i.id,
@@ -2127,18 +2134,26 @@ function registrarVenta({ metodoPago, montoAbonado, deuda, estado }) {
             color:          i.color  || '',
             cantidad:       i.cantidad,
             precioUnitario: i.precio,
-            subtotal:       i.precio * i.cantidad
+            subtotal:       i.precio * i.cantidad,
+            categoria:      i.categoria || '', // snapshot — no depende del catálogo actual
         })),
         total,
         metodoPago,
-        estado,
+        estado,        // estado de PAGO ("completada" | "deuda") — sin tocar su significado actual
         montoAbonado,
-        fecha: firebase.firestore.FieldValue.serverTimestamp()
+        fecha: ahora,
+
+        // ── Historial de ventas: campos nuevos, base para auditoría/reportes/sync desktop ──
+        idVenta:            ventaRef.id,
+        fechaCreacion:      ahora,
+        fechaActualizacion: ahora,
+        vendedorId:         sesionActual?.correo || null,
+        vendedorNombre:     sesionActual?.nombre || null,
+        clienteNombre:      clienteSeleccionado?.nombre || null,
+        origenVenta:        'movil',
+        estadoVenta:        'completada', // ciclo de vida de la venta — distinto de "estado" (pago). Preparado para 'anulada' | 'devuelta'
     };
 
-    // Usamos batch para atomicidad: venta + stock + (deuda si aplica)
-    const batch   = db.batch();
-    const ventaRef = db.collection('ventas').doc();
     batch.set(ventaRef, ventaData);
 
     // Descontar stock por cada ítem del carrito
@@ -2203,6 +2218,162 @@ function nuevaVenta() {
     clienteSeleccionado = null;
     metodoPagoActual    = null;
     iniciarVenta();
+}
+
+// =====================================================================
+// 10.B HISTORIAL DE VENTAS
+// =====================================================================
+// Empleados ven solo sus propias ventas (filtro por vendedorId).
+// Administradores ven el historial completo.
+// Sin paginación con cursor todavía: se trae hasta 50 ventas ordenadas
+// por fecha desc. Filtros avanzados e índices compuestos quedan para
+// una etapa posterior (ver docs/MONIARQUIA_ROADMAP.md).
+
+let historialVentasGlobal    = [];
+let terminoBusquedaHistorial = '';
+let ventaDetalleActual       = null;
+
+function irAHistorialVentas() {
+    cargarHistorialVentas();
+    navegarA('vista-historial-ventas');
+    cerrarMenu();
+}
+
+function cargarHistorialVentas() {
+    const lista = document.getElementById('historial-ventas-lista');
+    if (lista) lista.innerHTML = '<p class="cargando" style="text-align:center;padding:24px 0;">Cargando ventas...</p>';
+
+    let query = db.collection('ventas');
+    if (!esAdmin()) {
+        query = query.where('vendedorId', '==', sesionActual?.correo || '__sin_sesion__');
+    }
+
+    query.get()
+        .then(snapshot => {
+            historialVentasGlobal = snapshot.docs
+                .map(doc => ({ id: doc.id, ...doc.data() }))
+                .sort((a, b) => {
+                    const fa = a.fecha?.toDate?.() || new Date(0);
+                    const fb = b.fecha?.toDate?.() || new Date(0);
+                    return fb - fa;
+                })
+                .slice(0, 50);
+            renderizarHistorialVentas();
+        })
+        .catch(err => {
+            if (lista) lista.innerHTML = '<p class="cargando" style="text-align:center;padding:24px 0;">Error al cargar el historial.</p>';
+            console.error('Error al cargar historial de ventas:', err);
+        });
+}
+
+function buscarHistorialVentas() {
+    const input = document.getElementById('historial-ventas-busqueda');
+    terminoBusquedaHistorial = (input?.value || '').toLowerCase().trim();
+    renderizarHistorialVentas();
+}
+
+function renderizarHistorialVentas() {
+    const lista = document.getElementById('historial-ventas-lista');
+    if (!lista) return;
+
+    const termino = terminoBusquedaHistorial;
+    let filtradas = historialVentasGlobal;
+
+    if (termino) {
+        filtradas = historialVentasGlobal.filter(v => {
+            const nombreCliente = (v.clienteNombre || listClientesGlobal.find(c => c.id === v.clienteId)?.nombre || '').toLowerCase();
+            const ticket   = v.id.slice(-6).toLowerCase();
+            const vendedor = (v.vendedorNombre || '').toLowerCase();
+            return nombreCliente.includes(termino) || ticket.includes(termino) || vendedor.includes(termino);
+        });
+    }
+
+    if (filtradas.length === 0) {
+        lista.innerHTML = '<p class="cargando" style="text-align:center;padding:24px 0;">No se encontraron ventas.</p>';
+        return;
+    }
+
+    lista.innerHTML = filtradas.map(v => {
+        const nombreCliente = v.clienteNombre || listClientesGlobal.find(c => c.id === v.clienteId)?.nombre || 'Venta sin cliente';
+        const inicial = nombreCliente[0].toUpperCase();
+        const ticket  = '#' + v.id.slice(-6).toUpperCase();
+        const fecha   = v.fecha?.toDate?.()
+            ? v.fecha.toDate().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })
+            : '—';
+        const cantidadItems = (v.items || []).reduce((s, i) => s + (i.cantidad || 1), 0);
+        return `
+        <div class="cliente-item" onclick="abrirDetalleVenta('${v.id}')">
+            <div class="cliente-avatar">${inicial}</div>
+            <div class="cliente-info">
+                <p class="cliente-nombre">${nombreCliente}</p>
+                <p class="cliente-dato">${ticket} — ${fecha}</p>
+                <p class="cliente-dato">${cantidadItems} producto${cantidadItems === 1 ? '' : 's'}</p>
+            </div>
+            <p class="cambio-venta-monto">$ ${(v.total || 0).toLocaleString('es-AR')}</p>
+            <i data-lucide="chevron-right" class="cliente-chevron"></i>
+        </div>`;
+    }).join('');
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function abrirDetalleVenta(id) {
+    const venta = historialVentasGlobal.find(v => v.id === id);
+    if (!venta) return;
+    ventaDetalleActual = venta;
+    renderizarDetalleVenta(venta);
+    navegarA('vista-detalle-venta');
+}
+
+function renderizarDetalleVenta(v) {
+    const cont = document.getElementById('detalle-venta-contenido');
+    if (!cont) return;
+
+    const nombreCliente = v.clienteNombre || listClientesGlobal.find(c => c.id === v.clienteId)?.nombre || 'Venta sin cliente';
+    const ticket = '#' + v.id.slice(-6).toUpperCase();
+    const fecha  = v.fecha?.toDate?.()
+        ? v.fecha.toDate().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+        : '—';
+    const medioPagoTexto = {
+        efectivo: 'Efectivo', mercadopago: 'Mercado Pago', cuenta_corriente: 'Cuenta corriente'
+    }[v.metodoPago] || v.metodoPago || '—';
+    const estadoVentaTexto = {
+        completada: 'Completada', anulada: 'Anulada', devuelta: 'Devuelta'
+    }[v.estadoVenta] || 'Completada';
+
+    const itemsHTML = (v.items || []).map(i => {
+        const infoParts = [];
+        if (i.talla) infoParts.push(`Talle ${i.talla}`);
+        if (i.color) infoParts.push(`Color: ${i.color}`);
+        infoParts.push(`Cantidad: ${i.cantidad}`);
+        return `
+        <div class="detalle-venta-item">
+            <div class="detalle-venta-item-texto">
+                <p class="detalle-venta-item-nombre">${i.nombre}</p>
+                <p class="detalle-venta-item-meta">${infoParts.join(' · ')}</p>
+            </div>
+            <p class="detalle-venta-item-precio">$ ${(i.subtotal || 0).toLocaleString('es-AR')}</p>
+        </div>`;
+    }).join('');
+
+    cont.innerHTML = `
+        <div class="detalle-venta-header">
+            <p class="detalle-venta-ticket">${ticket}</p>
+            <p class="detalle-venta-fecha">${fecha}</p>
+        </div>
+        <div class="detalle-venta-card">
+            <div class="detalle-venta-fila"><span>Cliente</span><strong>${nombreCliente}</strong></div>
+            <div class="detalle-venta-fila"><span>Vendedor</span><strong>${v.vendedorNombre || '—'}</strong></div>
+            <div class="detalle-venta-fila"><span>Medio de pago</span><strong>${medioPagoTexto}</strong></div>
+            <div class="detalle-venta-fila"><span>Estado</span><strong>${estadoVentaTexto}</strong></div>
+        </div>
+        <div class="detalle-venta-productos">
+            ${itemsHTML}
+        </div>
+        <div class="detalle-venta-total">
+            <span>Total</span>
+            <strong>$ ${(v.total || 0).toLocaleString('es-AR')}</strong>
+        </div>`;
 }
 
 // =====================================================================
