@@ -26,6 +26,10 @@ const USUARIOS_MOCK = [
 
 let sesionActual = null; // { nombre, correo, rol } — NO se guarda la contraseña
 
+// ── SPLASH DE PRESENTACIÓN ───────────────────────────────────────────────────
+// Bloquea cualquier navegación hasta que termine la ventana de presentación.
+let splashPresentacionActivo = true;
+
 // ── CONFIGURACIÓN: ALERTAS DE STOCK BAJO ────────────────────────────────────
 const CONFIG_STOCK_KEY = 'moniarquia_config_stock';
 let configStock = { activo: true, stockMinimo: 3 };
@@ -169,6 +173,14 @@ let origenAgregarCliente = 'venta';
 // 2. CONEXIÓN A FIRESTORE (El "Woki-Toki" con Google)
 // =====================================================================
 document.addEventListener('DOMContentLoaded', () => {
+    // Forzar por JS que el splash de presentación sea la única vista activa,
+    // sin depender de que el HTML servido ya traiga la clase puesta.
+    splashPresentacionActivo = true;
+    document.querySelectorAll('.vista').forEach(v => v.classList.remove('active'));
+    const splashEl = document.getElementById('vista-splash-presentacion');
+    splashEl?.classList.add('active', 'splash-presentacion-forzado');
+    document.getElementById('app-container')?.setAttribute('data-vista', 'vista-splash-presentacion');
+
     if (typeof lucide !== 'undefined') lucide.createIcons();
     const btnVolver = document.getElementById('btn-volver');
     if (btnVolver) btnVolver.style.visibility = 'hidden';
@@ -176,8 +188,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Cargar configuración de alertas de stock (localStorage, sincrónico)
     cargarConfigStock();
 
-    // Iniciar app: verificar sesión guardada
-    iniciarApp();
+    // Splash de presentación: se muestra 2s y luego cede el paso al flujo normal
+    setTimeout(() => {
+        splashPresentacionActivo = false;
+        splashEl?.classList.remove('splash-presentacion-forzado');
+        iniciarApp();
+    }, 2000);
 
     actualizarBadgeCarrito();
     renderizarCarrito();
@@ -457,6 +473,9 @@ function filtrarCategoria(cat) {
 // =====================================================================
 
 function navegarA(vistaId, opciones) {
+    // Bloquear cualquier navegación mientras dura el splash de presentación
+    if (splashPresentacionActivo && vistaId !== 'vista-splash-presentacion') return;
+
     // Si se abandona la vista de escaneo, apagar la cámara
     if (document.querySelector('.vista.active')?.id === 'vista-escanear' && vistaId !== 'vista-escanear') {
         detenerCamara();
